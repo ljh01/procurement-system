@@ -1039,6 +1039,93 @@
 			// 初始化Supabase客户端
 			const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+			// === 添加密码重置处理函数 ===
+			async function handlePasswordReset() {
+				const urlParams = new URLSearchParams(window.location.hash.substring(1));
+				const type = urlParams.get('type');
+				const accessToken = urlParams.get('access_token');
+
+				if (type === 'recovery' && accessToken) {
+					// 显示重置密码表单
+					showResetPasswordForm();
+					return true;
+				}
+				return false;
+			}
+
+			function showResetPasswordForm() {
+				// 创建或显示重置密码表单
+				const resetFormHTML = `
+			    <div class="login-container">
+			      <div class="login-box">
+			        <h2 class="login-title">设置新密码</h2>
+			        <div class="form-group">
+			          <label for="new-password">新密码</label>
+			          <input type="password" id="new-password" placeholder="输入新密码（至少6位）">
+			        </div>
+			        <div class="form-group">
+			          <label for="confirm-new-password">确认新密码</label>
+			          <input type="password" id="confirm-new-password" placeholder="再次输入新密码">
+			        </div>
+			        <div id="reset-password-error" class="error-message"></div>
+			        <div id="reset-password-success" class="success-message"></div>
+			        <button class="btn-login" id="btn-confirm-reset">确认重置</button>
+			      </div>
+			    </div>
+			  `;
+
+				// 替换页面内容
+				document.body.innerHTML = resetFormHTML;
+
+				// 添加事件监听
+				document.getElementById('btn-confirm-reset').addEventListener('click', confirmPasswordReset);
+			}
+
+			async function confirmPasswordReset() {
+				const newPassword = document.getElementById('new-password').value;
+				const confirmPassword = document.getElementById('confirm-new-password').value;
+				const errorDiv = document.getElementById('reset-password-error');
+				const successDiv = document.getElementById('reset-password-success');
+
+				if (!newPassword || !confirmPassword) {
+					errorDiv.textContent = '请填写所有字段';
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					errorDiv.textContent = '密码至少需要6位';
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					errorDiv.textContent = '两次输入的密码不一致';
+					return;
+				}
+
+				try {
+					const {
+						error
+					} = await supabase.auth.updateUser({
+						password: newPassword
+					});
+
+					if (error) throw error;
+
+					successDiv.textContent = '密码重置成功！正在跳转到登录页面...';
+					errorDiv.textContent = '';
+
+					// 3秒后跳转到登录页面
+					setTimeout(() => {
+						window.location.href = window.location.origin;
+					}, 3000);
+
+				} catch (error) {
+					errorDiv.textContent = '重置失败: ' + error.message;
+					successDiv.textContent = '';
+				}
+			}
+			// === 密码重置处理函数结束 ===
+
 			// 登录相关DOM元素
 			const loginPage = document.getElementById('login-page');
 			const appContainer = document.getElementById('app-container');
@@ -1572,6 +1659,11 @@
 
 			// 初始化应用
 			async function init() {
+
+				// 先检查是否是密码重置流程
+				const isPasswordReset = await handlePasswordReset();
+				if (isPasswordReset) return;
+
 				// 检查当前登录状态
 				const {
 					data: {
@@ -2231,4 +2323,3 @@
 	</body>
 
 </html>
-
