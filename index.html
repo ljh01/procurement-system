@@ -1,1176 +1,1177 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>采购物品统计系统</title>
-    <!-- 引入Supabase客户端 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-        }
-
-        body {
-            background-color: #f5f7fa;
-            color: #333;
-            line-height: 1.6;
-            height: 100vh;
-            overflow: hidden;
-            padding: 0;
-        }
-
-        /* 登录页面样式 */
-        .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .login-title {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #2c3e50;
-            font-size: 28px;
-        }
-
-        .login-form .form-group {
-            margin-bottom: 20px;
-        }
-
-        .login-form label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .login-form input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        .remember-password {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .remember-password input {
-            width: auto;
-            margin-right: 8px;
-        }
-
-        .btn-login,
-        .btn-register,
-        .btn-forgot-password {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-bottom: 10px;
-        }
-
-        .btn-login {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-login:hover {
-            background: #2980b9;
-        }
-
-        .btn-register {
-            background: #2ecc71;
-            color: white;
-        }
-
-        .btn-register:hover {
-            background: #27ae60;
-        }
-
-        .btn-forgot-password {
-            background: #f39c12;
-            color: white;
-        }
-
-        .btn-forgot-password:hover {
-            background: #e67e22;
-        }
-
-        .login-toggle {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .toggle-link {
-            color: #3498db;
-            cursor: pointer;
-            text-decoration: underline;
-            margin: 0 5px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #2c3e50;
-            position: relative;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #3498db;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .user-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            padding: 10px 0;
-            min-width: 150px;
-            display: none;
-            z-index: 1000;
-        }
-
-        .user-menu-item {
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .user-menu-item:hover {
-            background: #f8f9fa;
-        }
-
-        .user-menu-item.logout {
-            color: #e74c3c;
-        }
-
-        .btn-logout {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .btn-logout:hover {
-            background: #c0392b;
-        }
-
-        /* 隐藏主应用，直到登录 */
-        .app-container {
-            display: none;
-        }
-
-        .error-message {
-            color: #e74c3c;
-            font-size: 14px;
-            margin-top: 5px;
-            text-align: center;
-        }
-
-        .success-message {
-            color: #2ecc71;
-            font-size: 14px;
-            margin-top: 5px;
-            text-align: center;
-        }
-
-        .info-message {
-            color: #3498db;
-            font-size: 14px;
-            margin-top: 5px;
-            text-align: center;
-        }
-
-        /* 原有样式保持不变 */
-        .container {
-            height: 100vh;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            position: relative;
-        }
-
-        h1 {
-            color: #2c3e50;
-            font-size: 28px;
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 15px;
-            margin-left: auto;
-        }
-
-        .btn-import,
-        .btn-export {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-
-        .btn-import:hover,
-        .btn-export:hover {
-            background: #2980b9;
-        }
-
-        .btn-export {
-            background: #2ecc71;
-        }
-
-        .btn-export:hover {
-            background: #27ae60;
-        }
-
-        .btn-delete-all {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-
-        .btn-delete-all:hover {
-            background: #c0392b;
-        }
-
-        .btn-monthly {
-            background: #9b59b6;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-
-        .btn-monthly:hover {
-            background: #8e44ad;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            flex-shrink: 0;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 8px;
-            padding: 15px 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            flex: 1;
-            margin: 0 10px;
-            min-width: 200px;
-            text-align: center;
-        }
-
-        .stat-card h3 {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .unreimbursed {
-            color: #e74c3c;
-        }
-
-        .reimbursed {
-            color: #2ecc71;
-        }
-
-        .content-area {
-            display: flex;
-            gap: 20px;
-            flex: 1;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .form-container {
-            flex: 0 0 300px;
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .form-container h2 {
-            margin-bottom: 20px;
-            text-align: center;
-            color: #2c3e50;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        input,
-        select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background: #2980b9;
-        }
-
-        .btn-add {
-            background: #2ecc71;
-            margin-top: 10px;
-        }
-
-        .btn-add:hover {
-            background: #27ae60;
-        }
-
-        .table-container {
-            flex: 1;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .table-header {
-            padding: 15px;
-            border-bottom: 1px solid #eaeaea;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            flex-shrink: 0;
-        }
-
-        .filter-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            white-space: nowrap;
-        }
-
-        .filter-controls select {
-            min-width: 140px;
-            padding: 8px 12px;
-            font-size: 14px;
-        }
-
-        .filter-label {
-            font-weight: 500;
-            color: #555;
-        }
-
-        .table-body-container {
-            flex: 1;
-            overflow: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 900px;
-        }
-
-        th,
-        td {
-            padding: 12px 15px;
-            text-align: center;
-            border-bottom: 1px solid #eaeaea;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .status-unreimbursed {
-            color: #e74c3c;
-            font-weight: 500;
-        }
-
-        .status-reimbursed {
-            color: #2ecc71;
-            font-weight: 500;
-        }
-
-        .invoice-checkbox {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: #2ecc71;
-            margin: 0 auto;
-            display: block;
-        }
-
-        .invoice-received {
-            color: #2ecc71;
-        }
-
-        .invoice-pending {
-            color: #e74c3c;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        .btn-edit,
-        .btn-delete,
-        .btn-reimburse {
-            padding: 6px 12px;
-            font-size: 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            color: white;
-        }
-
-        .btn-edit {
-            background: #f39c12;
-        }
-
-        .btn-edit:hover {
-            background: #e67e22;
-        }
-
-        .btn-delete {
-            background: #e74c3c;
-        }
-
-        .btn-delete:hover {
-            background: #c0392b;
-        }
-
-        .btn-reimburse {
-            background: #2ecc71;
-        }
-
-        .btn-reimburse:hover {
-            background: #27ae60;
-        }
-
-        /* 弹窗样式 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow: auto;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
-            position: relative;
-        }
-
-        .modal-header h2 {
-            color: #2c3e50;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #7f8c8d;
-            position: absolute;
-            right: 0;
-        }
-
-        .monthly-stats-grid {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .monthly-card {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .monthly-card h3 {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin-bottom: 10px;
-        }
-
-        .monthly-value {
-            font-size: 22px;
-            font-weight: bold;
-            color: #3498db;
-        }
-
-        .monthly-table-container {
-            overflow: auto;
-        }
-
-        .monthly-table-container table {
-            min-width: auto;
-            width: 100%;
-        }
-
-        /* 导入样式 */
-        .import-content {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        .import-section {
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .import-section h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .btn-confirm-import {
-            background: #2ecc71;
-            margin-top: 15px;
-        }
-
-        .btn-confirm-import:hover {
-            background: #27ae60;
-        }
-
-        .file-info {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #666;
-            padding: 8px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        .delete-section {
-            margin-top: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #e74c3c;
-        }
-
-        .delete-section h3 {
-            color: #e74c3c;
-            margin-bottom: 10px;
-        }
-
-        .delete-section p {
-            color: #666;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        @media (max-width: 1024px) {
-            .content-area {
-                flex-direction: column;
-            }
-
-            .form-container {
-                flex: 0 0 auto;
-                margin-bottom: 20px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            h1 {
-                position: static;
-                transform: none;
-            }
-
-            .stats {
-                flex-direction: column;
-            }
-
-            .stat-card {
-                margin: 0 0 15px;
-            }
-
-            .header-controls {
-                width: 100%;
-                margin-left: 0;
-                flex-direction: column;
-            }
-
-            .btn-import,
-            .btn-export,
-            .btn-delete-all,
-            .btn-monthly {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-
-            .actions {
-                flex-direction: column;
-            }
-
-            .btn-edit,
-            .btn-delete,
-            .btn-reimburse {
-                width: 100%;
-            }
-
-            .table-header {
-                flex-direction: column;
-                gap: 10px;
-                align-items: flex-start;
-            }
-
-            .filter-controls {
-                width: 100%;
-            }
-
-            .monthly-stats-grid {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- 登录页面 -->
-    <div id="login-page" class="login-container">
-        <div class="login-box">
-            <h2 class="login-title">采购物品统计系统</h2>
-            <div id="login-form" class="login-form">
-                <div class="form-group">
-                    <label for="login-email">邮箱</label>
-                    <input type="email" id="login-email" placeholder="输入邮箱">
-                </div>
-                <div class="form-group">
-                    <label for="login-password">密码</label>
-                    <input type="password" id="login-password" placeholder="输入密码">
-                </div>
-                <div class="remember-password">
-                    <input type="checkbox" id="remember-password">
-                    <label for="remember-password">记住密码</label>
-                </div>
-                <div id="login-error" class="error-message"></div>
-                <button class="btn-login" id="btn-login">登录</button>
-                <button class="btn-forgot-password" id="btn-forgot-password">忘记密码</button>
-                <div class="login-toggle">
-                    <span>没有账号？</span>
-                    <span class="toggle-link" id="show-register">立即注册</span>
-                </div>
-            </div>
-
-            <div id="register-form" class="login-form" style="display: none;">
-                <div class="form-group">
-                    <label for="register-email">邮箱</label>
-                    <input type="email" id="register-email" placeholder="输入邮箱">
-                </div>
-                <div class="form-group">
-                    <label for="register-password">密码</label>
-                    <input type="password" id="register-password" placeholder="输入密码（至少6位）">
-                </div>
-                <div class="remember-password">
-                    <input type="checkbox" id="register-remember-password">
-                    <label for="register-remember-password">记住密码</label>
-                </div>
-                <div id="register-error" class="error-message"></div>
-                <div id="register-success" class="success-message"></div>
-                <button class="btn-register" id="btn-register">注册</button>
-                <div class="login-toggle">
-                    <span>已有账号？</span>
-                    <span class="toggle-link" id="show-login">立即登录</span>
-                </div>
-            </div>
-
-            <!-- 忘记密码表单 -->
-            <div id="forgot-password-form" class="login-form" style="display: none;">
-                <div class="form-group">
-                    <label for="forgot-email">邮箱</label>
-                    <input type="email" id="forgot-email" placeholder="输入注册邮箱">
-                </div>
-                <div id="forgot-error" class="error-message"></div>
-                <div id="forgot-success" class="success-message"></div>
-                <button class="btn-forgot-password" id="btn-send-reset">发送重置邮件</button>
-                <div class="login-toggle">
-                    <span class="toggle-link" id="show-login-from-forgot">返回登录</span>
-                </div>
-            </div>
-
-            <!-- 重置密码表单 -->
-            <div id="reset-password-form" class="login-form" style="display: none;">
-                <div class="form-group">
-                    <label for="reset-password">新密码</label>
-                    <input type="password" id="reset-password" placeholder="输入新密码（至少6位）">
-                </div>
-                <div class="form-group">
-                    <label for="reset-confirm-password">确认新密码</label>
-                    <input type="password" id="reset-confirm-password" placeholder="再次输入新密码">
-                </div>
-                <div id="reset-error" class="error-message"></div>
-                <div id="reset-success" class="success-message"></div>
-                <button class="btn-register" id="btn-reset-password">重置密码</button>
-                <div class="login-toggle">
-                    <span class="toggle-link" id="show-login-from-reset">返回登录</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 主应用容器 -->
-    <div id="app-container" class="app-container">
-        <div class="container">
-            <header>
-                <h1>采购物品统计系统</h1>
-                <div class="user-info">
-                    <div class="user-avatar" id="user-avatar"></div>
-                    <span id="user-name">用户</span>
-                    <div class="user-menu" id="user-menu">
-                        <div class="user-menu-item" id="btn-change-password">修改密码</div>
-                        <div class="user-menu-item logout" id="btn-menu-logout">退出登录</div>
-                    </div>
-                </div>
-                <div class="header-controls">
-                    <button class="btn-import" id="btn-import">导入数据</button>
-                    <button class="btn-export" id="btn-export">导出数据</button>
-                    <button class="btn-delete-all" id="btn-delete-all">删除筛选数据</button>
-                    <button class="btn-monthly" id="btn-monthly">月度统计</button>
-                </div>
-            </header>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <h3>剩余未报销金额</h3>
-                    <div class="stat-value unreimbursed" id="remaining-amount">¥0.00</div>
-                </div>
-                <div class="stat-card">
-                    <h3>剩余待报销数量</h3>
-                    <div class="stat-value unreimbursed" id="remaining-count">0</div>
-                </div>
-                <div class="stat-card">
-                    <h3>总采购金额</h3>
-                    <div class="stat-value" id="monthly-total-amount">¥0.00</div>
-                </div>
-            </div>
-
-            <div class="content-area">
-                <div class="form-container">
-                    <h2>新增采购物品</h2>
-                    <div class="form-group">
-                        <label for="date">日期</label>
-                        <input type="date" id="date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="item-name">物品名称</label>
-                        <input type="text" id="item-name" placeholder="输入物品名称" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="supplier">供应商</label>
-                        <input type="text" id="supplier" placeholder="输入供应商名称" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="amount">金额</label>
-                        <input type="number" id="amount" placeholder="输入金额" min="0" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="reimbursed">报销状态</label>
-                        <select id="reimbursed">
-                            <option value="未报销" selected>未报销</option>
-                            <option value="已报销">已报销</option>
-                        </select>
-                    </div>
-                    <button class="btn-add" id="add-item">添加物品</button>
-                </div>
-
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3>采购物品列表</h3>
-                        <div class="filter-controls">
-                            <select id="month-filter">
-                                <option value="all">全部月份</option>
-                            </select>
-                            <select id="reimbursed-filter">
-                                <option value="all">全部报销状态</option>
-                                <option value="已报销">已报销</option>
-                                <option value="未报销">未报销</option>
-                            </select>
-                            <select id="invoice-filter">
-                                <option value="all">全部发票状态</option>
-                                <option value="received">已获得</option>
-                                <option value="pending">未获得</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="table-body-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>序号</th>
-                                    <th>日期</th>
-                                    <th>物品名称</th>
-                                    <th>供应商</th>
-                                    <th>金额</th>
-                                    <th>报销状态</th>
-                                    <th>发票状态</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="items-table">
-                                <!-- 动态内容 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 月度统计弹窗 -->
-        <div class="modal" id="monthly-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>月度统计详情</h2>
-                    <button class="close-btn" id="close-monthly">&times;</button>
-                </div>
-
-                <div class="monthly-stats-grid">
-                    <div class="monthly-card">
-                        <h3>总采购金额</h3>
-                        <div class="monthly-value" id="total-amount">¥0.00</div>
-                    </div>
-                    <div class="monthly-card">
-                        <h3>总采购数量</h3>
-                        <div class="monthly-value" id="total-count">0</div>
-                    </div>
-                    <div class="monthly-card">
-                        <h3>总未报销金额</h3>
-                        <div class="monthly-value unreimbursed" id="total-unreimbursed">¥0.00</div>
-                    </div>
-                </div>
-
-                <div class="monthly-table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>日期</th>
-                                <th>采购金额</th>
-                                <th>采购数量</th>
-                                <th>未报销金额</th>
-                            </tr>
-                        </thead>
-                        <tbody id="monthly-table">
-                            <!-- 动态内容 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 导入数据弹窗 -->
-        <div class="modal" id="import-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>数据导入</h2>
-                    <button class="close-btn" id="close-import">&times;</button>
-                </div>
-
-                <div class="import-content">
-                    <div class="import-section">
-                        <h3>导入数据</h3>
-                        <p>选择JSON格式的数据文件：</p>
-                        <input type="file" id="file-input" class="file-input" accept=".json">
-                        <button class="btn-import" id="select-file">选择文件</button>
-                        <div id="file-info" class="file-info">未选择文件</div>
-                        <button class="btn-confirm-import" id="confirm-import" style="display: none;">确认导入</button>
-                    </div>
-
-                    <div class="delete-section">
-                        <h3>危险操作</h3>
-                        <p>导入数据将<strong>完全覆盖</strong>当前的所有采购记录，此操作不可撤销。建议在导入前先导出备份当前数据。</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 修改密码弹窗 -->
-        <div class="modal" id="change-password-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>修改密码</h2>
-                    <button class="close-btn" id="close-change-password">&times;</button>
-                </div>
-
-                <div class="form-group">
-                    <label for="current-password">当前密码</label>
-                    <input type="password" id="current-password" placeholder="输入当前密码">
-                </div>
-                <div class="form-group">
-                    <label for="new-password">新密码</label>
-                    <input type="password" id="new-password" placeholder="输入新密码（至少6位）">
-                </div>
-                <div class="form-group">
-                    <label for="confirm-new-password">确认新密码</label>
-                    <input type="password" id="confirm-new-password" placeholder="再次输入新密码">
-                </div>
-                <div id="change-password-error" class="error-message"></div>
-                <div id="change-password-success" class="success-message"></div>
-                <button class="btn-add" id="btn-confirm-change-password">确认修改</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Supabase配置
-        const SUPABASE_URL = 'https://ieeeerqlnodtxcsbxvtb.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllZWVlcnFsbm9kdHhjc2J4dnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDIwMTEsImV4cCI6MjA3NjU3ODAxMX0.fQ7bzpmCxMCHRmuLIPkPhwuZ9oz0hdaNDd1RjmHfq90';
-
-        // 初始化Supabase客户端
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // === 登录状态管理 ===
-        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟不活动自动退出
-        let lastActivityTime = Date.now();
-        let activityTimer;
-
-        // 记住密码功能
-        const REMEMBERED_ACCOUNTS_KEY = 'remembered_accounts';
-        let rememberedAccounts = {};
-
-        // 加载保存的记住密码状态
-        function loadRememberedAccounts() {
-            const stored = localStorage.getItem(REMEMBERED_ACCOUNTS_KEY);
-            if (stored) {
-                rememberedAccounts = JSON.parse(stored);
-            }
-        }
-
-        // 保存记住密码状态
-        function saveRememberedAccounts() {
-            localStorage.setItem(REMEMBERED_ACCOUNTS_KEY, JSON.stringify(rememberedAccounts));
-        }
-
-        // 更新记住密码状态
-        function updateRememberedAccount(email, password, remember) {
-            if (remember) {
-                rememberedAccounts[email] = {
-                    password: password,
-                    remember: true
-                };
-            } else {
-                delete rememberedAccounts[email];
-            }
-            saveRememberedAccounts();
-        }
-
-        // 获取保存的密码
-        function getRememberedPassword(email) {
-            return rememberedAccounts[email] ? rememberedAccounts[email].password : '';
-        }
-
-        // 获取记住状态
-        function getRememberedStatus(email) {
-            return rememberedAccounts[email] ? rememberedAccounts[email].remember : false;
-        }
-
-        // 邮箱变化时更新密码和记住状态
-        function updatePasswordAndRememberStatus(email) {
-            const password = getRememberedPassword(email);
-            const remember = getRememberedStatus(email);
-            
-            document.getElementById('login-password').value = password;
-            document.getElementById('remember-password').checked = remember;
-            
-            // 更新注册表单的状态
-            document.getElementById('register-remember-password').checked = remember;
-        }
-
-        // 用户活动检测
-        function resetActivityTimer() {
-            lastActivityTime = Date.now();
-            if (activityTimer) {
-                clearTimeout(activityTimer);
-            }
-            activityTimer = setTimeout(checkSessionTimeout, SESSION_TIMEOUT);
-        }
-
-        // 检查会话超时
-        function checkSessionTimeout() {
-            const currentTime = Date.now();
-            const inactiveTime = currentTime - lastActivityTime;
-            
-            if (inactiveTime >= SESSION_TIMEOUT) {
-                // 自动退出
-                logout(true);
-            } else {
-                // 重新设置定时器
-                const remainingTime = SESSION_TIMEOUT - inactiveTime;
-                activityTimer = setTimeout(checkSessionTimeout, remainingTime);
-            }
-        }
-
-        // 退出登录
-        async function logout(isTimeout = false) {
-            try {
-                await supabase.auth.signOut();
-                // 清除会话存储
-                sessionStorage.removeItem('supabase.auth.token');
-                showLoginPage();
-                
-                if (isTimeout) {
-                    alert('由于长时间未活动，已自动退出登录。');
-                }
-            } catch (error) {
-                console.error('退出登录失败:', error);
-            }
-        }
-
-        // === 密码重置处理函数 ===
-        async function handlePasswordReset() {
-            const urlParams = new URLSearchParams(window.location.hash.substring(1));
-            const type = urlParams.get('type');
-            const accessToken = urlParams.get('access_token');
-
-            if (type === 'recovery' && accessToken) {
-                // 显示重置密码表单
-                showResetPasswordForm();
-                return true;
-            }
-            return false;
-        }
-
-        function showResetPasswordForm() {
-            // 创建或显示重置密码表单
-            const resetFormHTML = `
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>采购物品统计系统</title>
+		<!-- 引入Supabase客户端 -->
+		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+				font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+			}
+
+			body {
+				background-color: #f5f7fa;
+				color: #333;
+				line-height: 1.6;
+				height: 100vh;
+				overflow: hidden;
+				padding: 0;
+			}
+
+			/* 登录页面样式 */
+			.login-container {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			}
+
+			.login-box {
+				background: white;
+				padding: 40px;
+				border-radius: 10px;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+				width: 100%;
+				max-width: 400px;
+			}
+
+			.login-title {
+				text-align: center;
+				margin-bottom: 30px;
+				color: #2c3e50;
+				font-size: 28px;
+			}
+
+			.login-form .form-group {
+				margin-bottom: 20px;
+			}
+
+			.login-form label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: 500;
+				color: #555;
+			}
+
+			.login-form input {
+				width: 100%;
+				padding: 12px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 16px;
+			}
+
+			.remember-password {
+				display: flex;
+				align-items: center;
+				margin-bottom: 20px;
+			}
+
+			.remember-password input {
+				width: auto;
+				margin-right: 8px;
+			}
+
+			.btn-login,
+			.btn-register,
+			.btn-forgot-password {
+				width: 100%;
+				padding: 12px;
+				border: none;
+				border-radius: 4px;
+				font-size: 16px;
+				cursor: pointer;
+				transition: background 0.3s;
+				margin-bottom: 10px;
+			}
+
+			.btn-login {
+				background: #3498db;
+				color: white;
+			}
+
+			.btn-login:hover {
+				background: #2980b9;
+			}
+
+			.btn-register {
+				background: #2ecc71;
+				color: white;
+			}
+
+			.btn-register:hover {
+				background: #27ae60;
+			}
+
+			.btn-forgot-password {
+				background: #f39c12;
+				color: white;
+			}
+
+			.btn-forgot-password:hover {
+				background: #e67e22;
+			}
+
+			.login-toggle {
+				text-align: center;
+				margin-top: 20px;
+			}
+
+			.toggle-link {
+				color: #3498db;
+				cursor: pointer;
+				text-decoration: underline;
+				margin: 0 5px;
+			}
+
+			.user-info {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				color: #2c3e50;
+				position: relative;
+			}
+
+			.user-avatar {
+				width: 32px;
+				height: 32px;
+				border-radius: 50%;
+				background: #3498db;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: white;
+				font-weight: bold;
+				cursor: pointer;
+			}
+
+			.user-menu {
+				position: absolute;
+				top: 100%;
+				right: 0;
+				background: white;
+				border-radius: 8px;
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+				padding: 10px 0;
+				min-width: 150px;
+				display: none;
+				z-index: 1000;
+			}
+
+			.user-menu-item {
+				padding: 10px 20px;
+				cursor: pointer;
+				transition: background 0.3s;
+			}
+
+			.user-menu-item:hover {
+				background: #f8f9fa;
+			}
+
+			.user-menu-item.logout {
+				color: #e74c3c;
+			}
+
+			.btn-logout {
+				background: #e74c3c;
+				color: white;
+				border: none;
+				padding: 8px 15px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 14px;
+			}
+
+			.btn-logout:hover {
+				background: #c0392b;
+			}
+
+			/* 隐藏主应用，直到登录 */
+			.app-container {
+				display: none;
+			}
+
+			.error-message {
+				color: #e74c3c;
+				font-size: 14px;
+				margin-top: 5px;
+				text-align: center;
+			}
+
+			.success-message {
+				color: #2ecc71;
+				font-size: 14px;
+				margin-top: 5px;
+				text-align: center;
+			}
+
+			.info-message {
+				color: #3498db;
+				font-size: 14px;
+				margin-top: 5px;
+				text-align: center;
+			}
+
+			/* 原有样式保持不变 */
+			.container {
+				height: 100vh;
+				background: white;
+				display: flex;
+				flex-direction: column;
+				padding: 20px;
+			}
+
+			header {
+				text-align: center;
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid #eaeaea;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				flex-shrink: 0;
+				position: relative;
+			}
+
+			h1 {
+				color: #2c3e50;
+				font-size: 28px;
+				position: absolute;
+				left: 50%;
+				transform: translateX(-50%);
+			}
+
+			.header-controls {
+				display: flex;
+				gap: 15px;
+				margin-left: auto;
+			}
+
+			.btn-import,
+			.btn-export {
+				background: #3498db;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+				transition: background 0.3s;
+			}
+
+			.btn-import:hover,
+			.btn-export:hover {
+				background: #2980b9;
+			}
+
+			.btn-export {
+				background: #2ecc71;
+			}
+
+			.btn-export:hover {
+				background: #27ae60;
+			}
+
+			.btn-delete-all {
+				background: #e74c3c;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+				transition: background 0.3s;
+			}
+
+			.btn-delete-all:hover {
+				background: #c0392b;
+			}
+
+			.btn-monthly {
+				background: #9b59b6;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+				transition: background 0.3s;
+			}
+
+			.btn-monthly:hover {
+				background: #8e44ad;
+			}
+
+			.stats {
+				display: flex;
+				justify-content: space-between;
+				margin-bottom: 20px;
+				flex-wrap: wrap;
+				flex-shrink: 0;
+			}
+
+			.stat-card {
+				background: white;
+				border-radius: 8px;
+				padding: 15px 20px;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+				flex: 1;
+				margin: 0 10px;
+				min-width: 200px;
+				text-align: center;
+			}
+
+			.stat-card h3 {
+				font-size: 14px;
+				color: #7f8c8d;
+				margin-bottom: 8px;
+			}
+
+			.stat-value {
+				font-size: 24px;
+				font-weight: bold;
+			}
+
+			.unreimbursed {
+				color: #e74c3c;
+			}
+
+			.reimbursed {
+				color: #2ecc71;
+			}
+
+			.content-area {
+				display: flex;
+				gap: 20px;
+				flex: 1;
+				min-height: 0;
+				overflow: hidden;
+			}
+
+			.form-container {
+				flex: 0 0 300px;
+				background: #f8f9fa;
+				padding: 20px;
+				border-radius: 8px;
+				display: flex;
+				flex-direction: column;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+			}
+
+			.form-container h2 {
+				margin-bottom: 20px;
+				text-align: center;
+				color: #2c3e50;
+			}
+
+			.form-group {
+				margin-bottom: 15px;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: 500;
+				color: #555;
+			}
+
+			input,
+			select {
+				width: 100%;
+				padding: 10px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 16px;
+			}
+
+			button {
+				background: #3498db;
+				color: white;
+				border: none;
+				padding: 12px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+				transition: background 0.3s;
+			}
+
+			button:hover {
+				background: #2980b9;
+			}
+
+			.btn-add {
+				background: #2ecc71;
+				margin-top: 10px;
+			}
+
+			.btn-add:hover {
+				background: #27ae60;
+			}
+
+			.table-container {
+				flex: 1;
+				background: white;
+				border-radius: 8px;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+				display: flex;
+				flex-direction: column;
+			}
+
+			.table-header {
+				padding: 15px;
+				border-bottom: 1px solid #eaeaea;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				background: white;
+				flex-shrink: 0;
+			}
+
+			.filter-controls {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				white-space: nowrap;
+			}
+
+			.filter-controls select {
+				min-width: 140px;
+				padding: 8px 12px;
+				font-size: 14px;
+			}
+
+			.filter-label {
+				font-weight: 500;
+				color: #555;
+			}
+
+			.table-body-container {
+				flex: 1;
+				overflow: auto;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				min-width: 900px;
+			}
+
+			th,
+			td {
+				padding: 12px 15px;
+				text-align: center;
+				border-bottom: 1px solid #eaeaea;
+			}
+
+			th {
+				background-color: #f8f9fa;
+				font-weight: 600;
+				color: #2c3e50;
+				position: sticky;
+				top: 0;
+			}
+
+			tr:hover {
+				background-color: #f8f9fa;
+			}
+
+			.status-unreimbursed {
+				color: #e74c3c;
+				font-weight: 500;
+			}
+
+			.status-reimbursed {
+				color: #2ecc71;
+				font-weight: 500;
+			}
+
+			.invoice-checkbox {
+				width: 20px;
+				height: 20px;
+				cursor: pointer;
+				accent-color: #2ecc71;
+				margin: 0 auto;
+				display: block;
+			}
+
+			.invoice-received {
+				color: #2ecc71;
+			}
+
+			.invoice-pending {
+				color: #e74c3c;
+			}
+
+			.actions {
+				display: flex;
+				gap: 8px;
+				justify-content: center;
+			}
+
+			.btn-edit,
+			.btn-delete,
+			.btn-reimburse {
+				padding: 6px 12px;
+				font-size: 14px;
+				border-radius: 4px;
+				cursor: pointer;
+				border: none;
+				color: white;
+			}
+
+			.btn-edit {
+				background: #f39c12;
+			}
+
+			.btn-edit:hover {
+				background: #e67e22;
+			}
+
+			.btn-delete {
+				background: #e74c3c;
+			}
+
+			.btn-delete:hover {
+				background: #c0392b;
+			}
+
+			.btn-reimburse {
+				background: #2ecc71;
+			}
+
+			.btn-reimburse:hover {
+				background: #27ae60;
+			}
+
+			/* 弹窗样式 */
+			.modal {
+				display: none;
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0, 0, 0, 0.5);
+				z-index: 1000;
+				justify-content: center;
+				align-items: center;
+			}
+
+			.modal-content {
+				background: white;
+				border-radius: 10px;
+				padding: 30px;
+				width: 90%;
+				max-width: 500px;
+				max-height: 80vh;
+				overflow: auto;
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+			}
+
+			.modal-header {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid #eaeaea;
+				position: relative;
+			}
+
+			.modal-header h2 {
+				color: #2c3e50;
+			}
+
+			.close-btn {
+				background: none;
+				border: none;
+				font-size: 24px;
+				cursor: pointer;
+				color: #7f8c8d;
+				position: absolute;
+				right: 0;
+			}
+
+			.monthly-stats-grid {
+				display: flex;
+				justify-content: space-between;
+				gap: 15px;
+				margin-bottom: 30px;
+			}
+
+			.monthly-card {
+				background: #f8f9fa;
+				border-radius: 8px;
+				padding: 20px;
+				text-align: center;
+				flex: 1;
+				min-width: 0;
+			}
+
+			.monthly-card h3 {
+				font-size: 14px;
+				color: #7f8c8d;
+				margin-bottom: 10px;
+			}
+
+			.monthly-value {
+				font-size: 22px;
+				font-weight: bold;
+				color: #3498db;
+			}
+
+			.monthly-table-container {
+				overflow: auto;
+			}
+
+			.monthly-table-container table {
+				min-width: auto;
+				width: 100%;
+			}
+
+			/* 导入样式 */
+			.import-content {
+				display: flex;
+				flex-direction: column;
+				gap: 25px;
+			}
+
+			.import-section {
+				padding: 20px;
+				background: #f8f9fa;
+				border-radius: 8px;
+			}
+
+			.import-section h3 {
+				color: #2c3e50;
+				margin-bottom: 15px;
+			}
+
+			.file-input {
+				display: none;
+			}
+
+			.btn-confirm-import {
+				background: #2ecc71;
+				margin-top: 15px;
+			}
+
+			.btn-confirm-import:hover {
+				background: #27ae60;
+			}
+
+			.file-info {
+				margin-top: 10px;
+				font-size: 14px;
+				color: #666;
+				padding: 8px;
+				background: white;
+				border-radius: 4px;
+				border: 1px solid #ddd;
+			}
+
+			.delete-section {
+				margin-top: 20px;
+				padding: 20px;
+				background: #f8f9fa;
+				border-radius: 8px;
+				border-left: 4px solid #e74c3c;
+			}
+
+			.delete-section h3 {
+				color: #e74c3c;
+				margin-bottom: 10px;
+			}
+
+			.delete-section p {
+				color: #666;
+				margin-bottom: 15px;
+				font-size: 14px;
+			}
+
+			@media (max-width: 1024px) {
+				.content-area {
+					flex-direction: column;
+				}
+
+				.form-container {
+					flex: 0 0 auto;
+					margin-bottom: 20px;
+				}
+			}
+
+			@media (max-width: 768px) {
+				header {
+					flex-direction: column;
+					gap: 15px;
+				}
+
+				h1 {
+					position: static;
+					transform: none;
+				}
+
+				.stats {
+					flex-direction: column;
+				}
+
+				.stat-card {
+					margin: 0 0 15px;
+				}
+
+				.header-controls {
+					width: 100%;
+					margin-left: 0;
+					flex-direction: column;
+				}
+
+				.btn-import,
+				.btn-export,
+				.btn-delete-all,
+				.btn-monthly {
+					width: 100%;
+					margin-bottom: 10px;
+				}
+
+				.actions {
+					flex-direction: column;
+				}
+
+				.btn-edit,
+				.btn-delete,
+				.btn-reimburse {
+					width: 100%;
+				}
+
+				.table-header {
+					flex-direction: column;
+					gap: 10px;
+					align-items: flex-start;
+				}
+
+				.filter-controls {
+					width: 100%;
+				}
+
+				.monthly-stats-grid {
+					flex-direction: column;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<!-- 登录页面 -->
+		<div id="login-page" class="login-container">
+			<div class="login-box">
+				<h2 class="login-title">采购物品统计系统</h2>
+				<div id="login-form" class="login-form">
+					<div class="form-group">
+						<label for="login-email">邮箱</label>
+						<input type="email" id="login-email" placeholder="输入邮箱">
+					</div>
+					<div class="form-group">
+						<label for="login-password">密码</label>
+						<input type="password" id="login-password" placeholder="输入密码">
+					</div>
+					<div class="remember-password">
+						<input type="checkbox" id="remember-password">
+						<label for="remember-password">记住密码</label>
+					</div>
+					<div id="login-error" class="error-message"></div>
+					<button class="btn-login" id="btn-login">登录</button>
+					<button class="btn-forgot-password" id="btn-forgot-password">忘记密码</button>
+					<div class="login-toggle">
+						<span>没有账号？</span>
+						<span class="toggle-link" id="show-register">立即注册</span>
+					</div>
+				</div>
+
+				<div id="register-form" class="login-form" style="display: none;">
+					<div class="form-group">
+						<label for="register-email">邮箱</label>
+						<input type="email" id="register-email" placeholder="输入邮箱">
+					</div>
+					<div class="form-group">
+						<label for="register-password">密码</label>
+						<input type="password" id="register-password" placeholder="输入密码（至少6位）">
+					</div>
+					<div class="remember-password">
+						<input type="checkbox" id="register-remember-password">
+						<label for="register-remember-password">记住密码</label>
+					</div>
+					<div id="register-error" class="error-message"></div>
+					<div id="register-success" class="success-message"></div>
+					<button class="btn-register" id="btn-register">注册</button>
+					<div class="login-toggle">
+						<span>已有账号？</span>
+						<span class="toggle-link" id="show-login">立即登录</span>
+					</div>
+				</div>
+
+				<!-- 忘记密码表单 -->
+				<div id="forgot-password-form" class="login-form" style="display: none;">
+					<div class="form-group">
+						<label for="forgot-email">邮箱</label>
+						<input type="email" id="forgot-email" placeholder="输入注册邮箱">
+					</div>
+					<div id="forgot-error" class="error-message"></div>
+					<div id="forgot-success" class="success-message"></div>
+					<button class="btn-forgot-password" id="btn-send-reset">发送重置邮件</button>
+					<div class="login-toggle">
+						<span class="toggle-link" id="show-login-from-forgot">返回登录</span>
+					</div>
+				</div>
+
+				<!-- 重置密码表单 -->
+				<div id="reset-password-form" class="login-form" style="display: none;">
+					<div class="form-group">
+						<label for="reset-password">新密码</label>
+						<input type="password" id="reset-password" placeholder="输入新密码（至少6位）">
+					</div>
+					<div class="form-group">
+						<label for="reset-confirm-password">确认新密码</label>
+						<input type="password" id="reset-confirm-password" placeholder="再次输入新密码">
+					</div>
+					<div id="reset-error" class="error-message"></div>
+					<div id="reset-success" class="success-message"></div>
+					<button class="btn-register" id="btn-reset-password">重置密码</button>
+					<div class="login-toggle">
+						<span class="toggle-link" id="show-login-from-reset">返回登录</span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 主应用容器 -->
+		<div id="app-container" class="app-container">
+			<div class="container">
+				<header>
+					<h1>采购物品统计系统</h1>
+					<div class="user-info">
+						<div class="user-avatar" id="user-avatar"></div>
+						<span id="user-name">用户</span>
+						<div class="user-menu" id="user-menu">
+							<div class="user-menu-item" id="btn-change-password">修改密码</div>
+							<div class="user-menu-item logout" id="btn-menu-logout">退出登录</div>
+						</div>
+					</div>
+					<div class="header-controls">
+						<button class="btn-import" id="btn-import">导入数据</button>
+						<button class="btn-export" id="btn-export">导出数据</button>
+						<button class="btn-delete-all" id="btn-delete-all">删除筛选数据</button>
+						<button class="btn-monthly" id="btn-monthly">月度统计</button>
+					</div>
+				</header>
+
+				<div class="stats">
+					<div class="stat-card">
+						<h3>剩余未报销金额</h3>
+						<div class="stat-value unreimbursed" id="remaining-amount">¥0.00</div>
+					</div>
+					<div class="stat-card">
+						<h3>剩余待报销数量</h3>
+						<div class="stat-value unreimbursed" id="remaining-count">0</div>
+					</div>
+					<div class="stat-card">
+						<h3>总采购金额</h3>
+						<div class="stat-value" id="monthly-total-amount">¥0.00</div>
+					</div>
+				</div>
+
+				<div class="content-area">
+					<div class="form-container">
+						<h2>新增采购物品</h2>
+						<div class="form-group">
+							<label for="date">日期</label>
+							<input type="date" id="date" required>
+						</div>
+						<div class="form-group">
+							<label for="item-name">物品名称</label>
+							<input type="text" id="item-name" placeholder="输入物品名称" required>
+						</div>
+						<div class="form-group">
+							<label for="supplier">供应商</label>
+							<input type="text" id="supplier" placeholder="输入供应商名称" required>
+						</div>
+						<div class="form-group">
+							<label for="amount">金额</label>
+							<input type="number" id="amount" placeholder="输入金额" min="0" step="0.01" required>
+						</div>
+						<div class="form-group">
+							<label for="reimbursed">报销状态</label>
+							<select id="reimbursed">
+								<option value="未报销" selected>未报销</option>
+								<option value="已报销">已报销</option>
+							</select>
+						</div>
+						<button class="btn-add" id="add-item">添加物品</button>
+					</div>
+
+					<div class="table-container">
+						<div class="table-header">
+							<h3>采购物品列表</h3>
+							<div class="filter-controls">
+								<select id="month-filter">
+									<option value="all">全部月份</option>
+								</select>
+								<select id="reimbursed-filter">
+									<option value="all">全部报销状态</option>
+									<option value="已报销">已报销</option>
+									<option value="未报销">未报销</option>
+								</select>
+								<select id="invoice-filter">
+									<option value="all">全部发票状态</option>
+									<option value="received">已获得</option>
+									<option value="pending">未获得</option>
+								</select>
+							</div>
+						</div>
+						<div class="table-body-container">
+							<table>
+								<thead>
+									<tr>
+										<th>序号</th>
+										<th>日期</th>
+										<th>物品名称</th>
+										<th>供应商</th>
+										<th>金额</th>
+										<th>报销状态</th>
+										<th>发票状态</th>
+										<th>操作</th>
+									</tr>
+								</thead>
+								<tbody id="items-table">
+									<!-- 动态内容 -->
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 月度统计弹窗 -->
+			<div class="modal" id="monthly-modal">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h2>月度统计详情</h2>
+						<button class="close-btn" id="close-monthly">&times;</button>
+					</div>
+
+					<div class="monthly-stats-grid">
+						<div class="monthly-card">
+							<h3>总采购金额</h3>
+							<div class="monthly-value" id="total-amount">¥0.00</div>
+						</div>
+						<div class="monthly-card">
+							<h3>总采购数量</h3>
+							<div class="monthly-value" id="total-count">0</div>
+						</div>
+						<div class="monthly-card">
+							<h3>总未报销金额</h3>
+							<div class="monthly-value unreimbursed" id="total-unreimbursed">¥0.00</div>
+						</div>
+					</div>
+
+					<div class="monthly-table-container">
+						<table>
+							<thead>
+								<tr>
+									<th>日期</th>
+									<th>采购金额</th>
+									<th>采购数量</th>
+									<th>未报销金额</th>
+								</tr>
+							</thead>
+							<tbody id="monthly-table">
+								<!-- 动态内容 -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- 导入数据弹窗 -->
+			<div class="modal" id="import-modal">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h2>数据导入</h2>
+						<button class="close-btn" id="close-import">&times;</button>
+					</div>
+
+					<div class="import-content">
+						<div class="import-section">
+							<h3>导入数据</h3>
+							<p>选择JSON格式的数据文件：</p>
+							<input type="file" id="file-input" class="file-input" accept=".json">
+							<button class="btn-import" id="select-file">选择文件</button>
+							<div id="file-info" class="file-info">未选择文件</div>
+							<button class="btn-confirm-import" id="confirm-import" style="display: none;">确认导入</button>
+						</div>
+
+						<div class="delete-section">
+							<h3>危险操作</h3>
+							<p>导入数据将<strong>完全覆盖</strong>当前的所有采购记录，此操作不可撤销。建议在导入前先导出备份当前数据。</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 修改密码弹窗 -->
+			<div class="modal" id="change-password-modal">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h2>修改密码</h2>
+						<button class="close-btn" id="close-change-password">&times;</button>
+					</div>
+
+					<div class="form-group">
+						<label for="current-password">当前密码</label>
+						<input type="password" id="current-password" placeholder="输入当前密码">
+					</div>
+					<div class="form-group">
+						<label for="new-password">新密码</label>
+						<input type="password" id="new-password" placeholder="输入新密码（至少6位）">
+					</div>
+					<div class="form-group">
+						<label for="confirm-new-password">确认新密码</label>
+						<input type="password" id="confirm-new-password" placeholder="再次输入新密码">
+					</div>
+					<div id="change-password-error" class="error-message"></div>
+					<div id="change-password-success" class="success-message"></div>
+					<button class="btn-add" id="btn-confirm-change-password">确认修改</button>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// Supabase配置
+			const SUPABASE_URL = 'https://ieeeerqlnodtxcsbxvtb.supabase.co';
+			const SUPABASE_ANON_KEY =
+				'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllZWVlcnFsbm9kdHhjc2J4dnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDIwMTEsImV4cCI6MjA3NjU3ODAxMX0.fQ7bzpmCxMCHRmuLIPkPhwuZ9oz0hdaNDd1RjmHfq90';
+
+			// 初始化Supabase客户端
+			const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+			// === 登录状态管理 ===
+			const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟不活动自动退出
+			let lastActivityTime = Date.now();
+			let activityTimer;
+
+			// 记住密码功能
+			const REMEMBERED_ACCOUNTS_KEY = 'remembered_accounts';
+			let rememberedAccounts = {};
+
+			// 加载保存的记住密码状态
+			function loadRememberedAccounts() {
+				const stored = localStorage.getItem(REMEMBERED_ACCOUNTS_KEY);
+				if (stored) {
+					rememberedAccounts = JSON.parse(stored);
+				}
+			}
+
+			// 保存记住密码状态
+			function saveRememberedAccounts() {
+				localStorage.setItem(REMEMBERED_ACCOUNTS_KEY, JSON.stringify(rememberedAccounts));
+			}
+
+			// 更新记住密码状态
+			function updateRememberedAccount(email, password, remember) {
+				if (remember) {
+					rememberedAccounts[email] = {
+						password: password,
+						remember: true
+					};
+				} else {
+					delete rememberedAccounts[email];
+				}
+				saveRememberedAccounts();
+			}
+
+			// 获取保存的密码
+			function getRememberedPassword(email) {
+				return rememberedAccounts[email] ? rememberedAccounts[email].password : '';
+			}
+
+			// 获取记住状态
+			function getRememberedStatus(email) {
+				return rememberedAccounts[email] ? rememberedAccounts[email].remember : false;
+			}
+
+			// 邮箱变化时更新密码和记住状态
+			function updatePasswordAndRememberStatus(email) {
+				const password = getRememberedPassword(email);
+				const remember = getRememberedStatus(email);
+
+				document.getElementById('login-password').value = password;
+				document.getElementById('remember-password').checked = remember;
+
+				// 更新注册表单的状态
+				document.getElementById('register-remember-password').checked = remember;
+			}
+
+			// 用户活动检测
+			function resetActivityTimer() {
+				lastActivityTime = Date.now();
+				if (activityTimer) {
+					clearTimeout(activityTimer);
+				}
+				activityTimer = setTimeout(checkSessionTimeout, SESSION_TIMEOUT);
+			}
+
+			// 检查会话超时
+			function checkSessionTimeout() {
+				const currentTime = Date.now();
+				const inactiveTime = currentTime - lastActivityTime;
+
+				if (inactiveTime >= SESSION_TIMEOUT) {
+					// 自动退出
+					logout(true);
+				} else {
+					// 重新设置定时器
+					const remainingTime = SESSION_TIMEOUT - inactiveTime;
+					activityTimer = setTimeout(checkSessionTimeout, remainingTime);
+				}
+			}
+
+			// 退出登录
+			async function logout(isTimeout = false) {
+				try {
+					await supabase.auth.signOut();
+					// 清除会话存储
+					sessionStorage.removeItem('supabase.auth.token');
+					showLoginPage();
+
+					if (isTimeout) {
+						alert('由于长时间未活动，已自动退出登录。');
+					}
+				} catch (error) {
+					console.error('退出登录失败:', error);
+				}
+			}
+
+			// === 密码重置处理函数 ===
+			async function handlePasswordReset() {
+				const urlParams = new URLSearchParams(window.location.hash.substring(1));
+				const type = urlParams.get('type');
+				const accessToken = urlParams.get('access_token');
+
+				if (type === 'recovery' && accessToken) {
+					// 显示重置密码表单
+					showResetPasswordForm();
+					return true;
+				}
+				return false;
+			}
+
+			function showResetPasswordForm() {
+				// 创建或显示重置密码表单
+				const resetFormHTML = `
                 <div class="login-container">
                   <div class="login-box">
                     <h2 class="login-title">设置新密码</h2>
@@ -1187,510 +1188,572 @@
                   </div>
                 </div>
             `;
-            
-            document.body.innerHTML = resetFormHTML;
-            
-            document.getElementById('btn-reset-password').addEventListener('click', async () => {
-                const newPassword = document.getElementById('new-password').value;
-                const confirmPassword = document.getElementById('confirm-new-password').value;
-                const errorDiv = document.getElementById('reset-error');
-                
-                if (newPassword.length < 6) {
-                    errorDiv.textContent = '密码长度至少为6位';
-                    return;
-                }
-                
-                if (newPassword !== confirmPassword) {
-                    errorDiv.textContent = '两次输入的密码不一致';
-                    return;
-                }
-                
-                try {
-                    const { error } = await supabase.auth.updateUser({
-                        password: newPassword
-                    });
-                    
-                    if (error) throw error;
-                    
-                    errorDiv.textContent = '';
-                    alert('密码重置成功，请使用新密码登录');
-                    window.location.href = window.location.origin + window.location.pathname;
-                } catch (error) {
-                    errorDiv.textContent = '密码重置失败: ' + error.message;
-                }
-            });
-        }
 
-        // === 登录状态检查 ===
-        async function checkAuthStatus() {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error) throw error;
-                
-                if (session) {
-                    // 用户已登录
-                    showAppPage(session.user);
-                    resetActivityTimer();
-                    return true;
-                }
-                
-                // 检查是否有密码重置请求
-                if (await handlePasswordReset()) {
-                    return false;
-                }
-                
-                // 用户未登录
-                showLoginPage();
-                return false;
-            } catch (error) {
-                console.error('检查登录状态失败:', error);
-                showLoginPage();
-                return false;
-            }
-        }
+				document.body.innerHTML = resetFormHTML;
 
-        // === 页面显示控制 ===
-        function showLoginPage() {
-            document.getElementById('login-page').style.display = 'flex';
-            document.getElementById('app-container').style.display = 'none';
-        }
+				document.getElementById('btn-reset-password').addEventListener('click', async () => {
+					const newPassword = document.getElementById('new-password').value;
+					const confirmPassword = document.getElementById('confirm-new-password').value;
+					const errorDiv = document.getElementById('reset-error');
 
-        function showAppPage(user) {
-            document.getElementById('login-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'block';
-            
-            // 更新用户信息
-            document.getElementById('user-name').textContent = user.email;
-            document.getElementById('user-avatar').textContent = user.email.charAt(0).toUpperCase();
-            
-            // 加载数据
-            loadItems();
-        }
+					if (newPassword.length < 6) {
+						errorDiv.textContent = '密码长度至少为6位';
+						return;
+					}
 
-        // === 登录/注册功能 ===
-        document.getElementById('show-register').addEventListener('click', () => {
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('register-form').style.display = 'block';
-        });
+					if (newPassword !== confirmPassword) {
+						errorDiv.textContent = '两次输入的密码不一致';
+						return;
+					}
 
-        document.getElementById('show-login').addEventListener('click', () => {
-            document.getElementById('register-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        });
+					try {
+						const {
+							error
+						} = await supabase.auth.updateUser({
+							password: newPassword
+						});
 
-        document.getElementById('btn-forgot-password').addEventListener('click', () => {
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('forgot-password-form').style.display = 'block';
-        });
+						if (error) throw error;
 
-        document.getElementById('show-login-from-forgot').addEventListener('click', () => {
-            document.getElementById('forgot-password-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        });
+						errorDiv.textContent = '';
+						alert('密码重置成功，请使用新密码登录');
+						window.location.href = window.location.origin + window.location.pathname;
+					} catch (error) {
+						errorDiv.textContent = '密码重置失败: ' + error.message;
+					}
+				});
+			}
 
-        document.getElementById('show-login-from-reset').addEventListener('click', () => {
-            document.getElementById('reset-password-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        });
+			// === 登录状态检查 ===
+			async function checkAuthStatus() {
+				try {
+					const {
+						data: {
+							session
+						},
+						error
+					} = await supabase.auth.getSession();
 
-        // 邮箱输入框事件 - 自动填充密码和记住状态
-        document.getElementById('login-email').addEventListener('change', function() {
-            updatePasswordAndRememberStatus(this.value);
-        });
+					if (error) throw error;
 
-        document.getElementById('register-email').addEventListener('change', function() {
-            updatePasswordAndRememberStatus(this.value);
-        });
+					if (session) {
+						// 用户已登录
+						showAppPage(session.user);
+						resetActivityTimer();
+						return true;
+					}
 
-        // 登录功能
-        document.getElementById('btn-login').addEventListener('click', async () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const remember = document.getElementById('remember-password').checked;
-            const errorDiv = document.getElementById('login-error');
-            
-            if (!email || !password) {
-                errorDiv.textContent = '请输入邮箱和密码';
-                return;
-            }
-            
-            try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-                
-                if (error) throw error;
-                
-                // 更新记住密码状态
-                updateRememberedAccount(email, password, remember);
-                
-                errorDiv.textContent = '';
-                showAppPage(data.user);
-                resetActivityTimer();
-            } catch (error) {
-                errorDiv.textContent = '登录失败: ' + error.message;
-            }
-        });
+					// 检查是否有密码重置请求
+					if (await handlePasswordReset()) {
+						return false;
+					}
 
-        // 注册功能
-        document.getElementById('btn-register').addEventListener('click', async () => {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const remember = document.getElementById('register-remember-password').checked;
-            const errorDiv = document.getElementById('register-error');
-            const successDiv = document.getElementById('register-success');
-            
-            if (!email || !password) {
-                errorDiv.textContent = '请输入邮箱和密码';
-                return;
-            }
-            
-            if (password.length < 6) {
-                errorDiv.textContent = '密码长度至少为6位';
-                return;
-            }
-            
-            try {
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password
-                });
-                
-                if (error) throw error;
-                
-                // 更新记住密码状态
-                updateRememberedAccount(email, password, remember);
-                
-                errorDiv.textContent = '';
-                successDiv.textContent = '注册成功！请检查您的邮箱以验证账户。';
-                
-                // 3秒后返回登录页面
-                setTimeout(() => {
-                    document.getElementById('register-form').style.display = 'none';
-                    document.getElementById('login-form').style.display = 'block';
-                    successDiv.textContent = '';
-                }, 3000);
-            } catch (error) {
-                errorDiv.textContent = '注册失败: ' + error.message;
-            }
-        });
+					// 用户未登录
+					showLoginPage();
+					return false;
+				} catch (error) {
+					console.error('检查登录状态失败:', error);
+					showLoginPage();
+					return false;
+				}
+			}
 
-        // 忘记密码功能
-        document.getElementById('btn-send-reset').addEventListener('click', async () => {
-            const email = document.getElementById('forgot-email').value;
-            const errorDiv = document.getElementById('forgot-error');
-            const successDiv = document.getElementById('forgot-success');
-            
-            if (!email) {
-                errorDiv.textContent = '请输入邮箱';
-                return;
-            }
-            
-            try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: window.location.href,
-                });
-                
-                if (error) throw error;
-                
-                errorDiv.textContent = '';
-                successDiv.textContent = '重置密码邮件已发送，请检查您的邮箱。';
-            } catch (error) {
-                errorDiv.textContent = '发送重置邮件失败: ' + error.message;
-            }
-        });
+			// === 页面显示控制 ===
+			function showLoginPage() {
+				document.getElementById('login-page').style.display = 'flex';
+				document.getElementById('app-container').style.display = 'none';
+			}
 
-        // 重置密码功能
-        document.getElementById('btn-reset-password').addEventListener('click', async () => {
-            const newPassword = document.getElementById('reset-password').value;
-            const confirmPassword = document.getElementById('reset-confirm-password').value;
-            const errorDiv = document.getElementById('reset-error');
-            const successDiv = document.getElementById('reset-success');
-            
-            if (newPassword.length < 6) {
-                errorDiv.textContent = '密码长度至少为6位';
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                errorDiv.textContent = '两次输入的密码不一致';
-                return;
-            }
-            
-            try {
-                const { error } = await supabase.auth.updateUser({
-                    password: newPassword
-                });
-                
-                if (error) throw error;
-                
-                errorDiv.textContent = '';
-                successDiv.textContent = '密码重置成功！';
-                
-                // 3秒后返回登录页面
-                setTimeout(() => {
-                    document.getElementById('reset-password-form').style.display = 'none';
-                    document.getElementById('login-form').style.display = 'block';
-                    successDiv.textContent = '';
-                }, 3000);
-            } catch (error) {
-                errorDiv.textContent = '密码重置失败: ' + error.message;
-            }
-        });
+			function showAppPage(user) {
+				document.getElementById('login-page').style.display = 'none';
+				document.getElementById('app-container').style.display = 'block';
 
-        // 退出登录
-        document.getElementById('btn-menu-logout').addEventListener('click', () => {
-            logout(false);
-        });
+				// 更新用户信息
+				document.getElementById('user-name').textContent = user.email;
+				document.getElementById('user-avatar').textContent = user.email.charAt(0).toUpperCase();
 
-        // 用户头像点击事件
-        document.getElementById('user-avatar').addEventListener('click', () => {
-            const menu = document.getElementById('user-menu');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        });
+				// 加载数据
+				loadItems();
+			}
 
-        // 修改密码功能
-        document.getElementById('btn-change-password').addEventListener('click', () => {
-            document.getElementById('user-menu').style.display = 'none';
-            document.getElementById('change-password-modal').style.display = 'flex';
-        });
+			// === 登录/注册功能 ===
+			document.getElementById('show-register').addEventListener('click', () => {
+				document.getElementById('login-form').style.display = 'none';
+				document.getElementById('register-form').style.display = 'block';
+			});
 
-        document.getElementById('btn-confirm-change-password').addEventListener('click', async () => {
-            const currentPassword = document.getElementById('current-password').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-new-password').value;
-            const errorDiv = document.getElementById('change-password-error');
-            const successDiv = document.getElementById('change-password-success');
-            
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                errorDiv.textContent = '请填写所有字段';
-                return;
-            }
-            
-            if (newPassword.length < 6) {
-                errorDiv.textContent = '新密码长度至少为6位';
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                errorDiv.textContent = '两次输入的新密码不一致';
-                return;
-            }
-            
-            try {
-                // 验证当前密码
-                const { data: { user } } = await supabase.auth.getUser();
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: user.email,
-                    password: currentPassword
-                });
-                
-                if (signInError) {
-                    errorDiv.textContent = '当前密码不正确';
-                    return;
-                }
-                
-                // 更新密码
-                const { error } = await supabase.auth.updateUser({
-                    password: newPassword
-                });
-                
-                if (error) throw error;
-                
-                errorDiv.textContent = '';
-                successDiv.textContent = '密码修改成功！';
-                
-                // 3秒后关闭弹窗
-                setTimeout(() => {
-                    document.getElementById('change-password-modal').style.display = 'none';
-                    successDiv.textContent = '';
-                    // 清空表单
-                    document.getElementById('current-password').value = '';
-                    document.getElementById('new-password').value = '';
-                    document.getElementById('confirm-new-password').value = '';
-                }, 3000);
-            } catch (error) {
-                errorDiv.textContent = '密码修改失败: ' + error.message;
-            }
-        });
+			document.getElementById('show-login').addEventListener('click', () => {
+				document.getElementById('register-form').style.display = 'none';
+				document.getElementById('login-form').style.display = 'block';
+			});
 
-        // 关闭弹窗
-        document.getElementById('close-change-password').addEventListener('click', () => {
-            document.getElementById('change-password-modal').style.display = 'none';
-        });
+			document.getElementById('btn-forgot-password').addEventListener('click', () => {
+				document.getElementById('login-form').style.display = 'none';
+				document.getElementById('forgot-password-form').style.display = 'block';
+			});
 
-        // Enter键登录/注册
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                if (document.getElementById('login-form').style.display !== 'none') {
-                    document.getElementById('btn-login').click();
-                } else if (document.getElementById('register-form').style.display !== 'none') {
-                    document.getElementById('btn-register').click();
-                } else if (document.getElementById('forgot-password-form').style.display !== 'none') {
-                    document.getElementById('btn-send-reset').click();
-                } else if (document.getElementById('reset-password-form').style.display !== 'none') {
-                    document.getElementById('btn-reset-password').click();
-                }
-            }
-        });
+			document.getElementById('show-login-from-forgot').addEventListener('click', () => {
+				document.getElementById('forgot-password-form').style.display = 'none';
+				document.getElementById('login-form').style.display = 'block';
+			});
 
-        // 用户活动监听
-        document.addEventListener('mousemove', resetActivityTimer);
-        document.addEventListener('keydown', resetActivityTimer);
-        document.addEventListener('click', resetActivityTimer);
+			document.getElementById('show-login-from-reset').addEventListener('click', () => {
+				document.getElementById('reset-password-form').style.display = 'none';
+				document.getElementById('login-form').style.display = 'block';
+			});
 
-        // === 应用功能代码（保持不变）===
-        let items = [];
-        let editingId = null;
+			// 邮箱输入框事件 - 自动填充密码和记住状态
+			document.getElementById('login-email').addEventListener('change', function() {
+				updatePasswordAndRememberStatus(this.value);
+			});
 
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 加载记住密码状态
-            loadRememberedAccounts();
-            
-            // 检查登录状态
-            await checkAuthStatus();
-            
-            // 初始化日期为今天
-            document.getElementById('date').valueAsDate = new Date();
-            
-            // 初始化月份筛选器
-            initializeMonthFilter();
-            
-            // 加载数据
-            loadItems();
-            
-            // 添加事件监听器
-            document.getElementById('add-item').addEventListener('click', addItem);
-            document.getElementById('month-filter').addEventListener('change', filterItems);
-            document.getElementById('reimbursed-filter').addEventListener('change', filterItems);
-            document.getElementById('invoice-filter').addEventListener('change', filterItems);
-            document.getElementById('btn-monthly').addEventListener('click', showMonthlyStats);
-            document.getElementById('close-monthly').addEventListener('click', () => {
-                document.getElementById('monthly-modal').style.display = 'none';
-            });
-            document.getElementById('btn-import').addEventListener('click', () => {
-                document.getElementById('import-modal').style.display = 'flex';
-            });
-            document.getElementById('close-import').addEventListener('click', () => {
-                document.getElementById('import-modal').style.display = 'none';
-            });
-            document.getElementById('select-file').addEventListener('click', () => {
-                document.getElementById('file-input').click();
-            });
-            document.getElementById('file-input').addEventListener('change', handleFileSelect);
-            document.getElementById('confirm-import').addEventListener('click', importData);
-            document.getElementById('btn-export').addEventListener('click', exportData);
-            document.getElementById('btn-delete-all').addEventListener('click', deleteFilteredItems);
-        });
+			document.getElementById('register-email').addEventListener('change', function() {
+				updatePasswordAndRememberStatus(this.value);
+			});
 
-        // 初始化月份筛选器
-        function initializeMonthFilter() {
-            const monthFilter = document.getElementById('month-filter');
-            const currentYear = new Date().getFullYear();
-            
-            // 添加最近12个月
-            for (let i = 0; i < 12; i++) {
-                const date = new Date(currentYear, new Date().getMonth() - i, 1);
-                const year = date.getFullYear();
-                const month = date.getMonth() + 1;
-                const monthStr = month < 10 ? `0${month}` : month;
-                const value = `${year}-${monthStr}`;
-                const text = `${year}年${month}月`;
-                
-                const option = document.createElement('option');
-                option.value = value;
-                option.textContent = text;
-                monthFilter.appendChild(option);
-            }
-        }
+			// 登录功能
+			document.getElementById('btn-login').addEventListener('click', async () => {
+				const email = document.getElementById('login-email').value;
+				const password = document.getElementById('login-password').value;
+				const remember = document.getElementById('remember-password').checked;
+				const errorDiv = document.getElementById('login-error');
 
-        // 添加采购物品
-        async function addItem() {
-            const date = document.getElementById('date').value;
-            const itemName = document.getElementById('item-name').value;
-            const supplier = document.getElementById('supplier').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const reimbursed = document.getElementById('reimbursed').value;
-            
-            if (!date || !itemName || !supplier || isNaN(amount)) {
-                alert('请填写所有字段');
-                return;
-            }
-            
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            const newItem = {
-                date,
-                item_name: itemName,
-                supplier,
-                amount,
-                reimbursed,
-                invoice_received: false,
-                user_id: user.id
-            };
-            
-            try {
-                const { data, error } = await supabase
-                    .from('procurement_items')
-                    .insert([newItem])
-                    .select();
-                
-                if (error) throw error;
-                
-                // 清空表单
-                document.getElementById('item-name').value = '';
-                document.getElementById('supplier').value = '';
-                document.getElementById('amount').value = '';
-                
-                // 重新加载数据
-                loadItems();
-            } catch (error) {
-                console.error('添加物品失败:', error);
-                alert('添加物品失败: ' + error.message);
-            }
-        }
+				if (!email || !password) {
+					errorDiv.textContent = '请输入邮箱和密码';
+					return;
+				}
 
-        // 加载采购物品
-        async function loadItems() {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                const { data, error } = await supabase
-                    .from('procurement_items')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('date', { ascending: false });
-                
-                if (error) throw error;
-                
-                items = data || [];
-                displayItems(items);
-                updateStats();
-            } catch (error) {
-                console.error('加载物品失败:', error);
-                alert('加载物品失败: ' + error.message);
-            }
-        }
+				try {
+					const {
+						data,
+						error
+					} = await supabase.auth.signInWithPassword({
+						email,
+						password
+					});
 
-        // 显示采购物品
-        function displayItems(itemsToDisplay) {
-            const tableBody = document.getElementById('items-table');
-            tableBody.innerHTML = '';
-            
-            itemsToDisplay.forEach((item, index) => {
-                const row = document.createElement('tr');
-                
-                // 格式化日期
-                const dateObj = new Date(item.date);
-                const formattedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
-                
-                // 格式化金额
-                const formattedAmount = `¥${item.amount.toFixed(2)}`;
-                
-                row.innerHTML = `
+					if (error) throw error;
+
+					// 更新记住密码状态
+					updateRememberedAccount(email, password, remember);
+
+					errorDiv.textContent = '';
+					showAppPage(data.user);
+					resetActivityTimer();
+				} catch (error) {
+					errorDiv.textContent = '登录失败: ' + error.message;
+				}
+			});
+
+			// 注册功能
+			document.getElementById('btn-register').addEventListener('click', async () => {
+				const email = document.getElementById('register-email').value;
+				const password = document.getElementById('register-password').value;
+				const remember = document.getElementById('register-remember-password').checked;
+				const errorDiv = document.getElementById('register-error');
+				const successDiv = document.getElementById('register-success');
+
+				if (!email || !password) {
+					errorDiv.textContent = '请输入邮箱和密码';
+					return;
+				}
+
+				if (password.length < 6) {
+					errorDiv.textContent = '密码长度至少为6位';
+					return;
+				}
+
+				try {
+					const {
+						data,
+						error
+					} = await supabase.auth.signUp({
+						email,
+						password
+					});
+
+					if (error) throw error;
+
+					// 更新记住密码状态
+					updateRememberedAccount(email, password, remember);
+
+					errorDiv.textContent = '';
+					successDiv.textContent = '注册成功！请检查您的邮箱以验证账户。';
+
+					// 3秒后返回登录页面
+					setTimeout(() => {
+						document.getElementById('register-form').style.display = 'none';
+						document.getElementById('login-form').style.display = 'block';
+						successDiv.textContent = '';
+					}, 3000);
+				} catch (error) {
+					errorDiv.textContent = '注册失败: ' + error.message;
+				}
+			});
+
+			// 忘记密码功能
+			document.getElementById('btn-send-reset').addEventListener('click', async () => {
+				const email = document.getElementById('forgot-email').value;
+				const errorDiv = document.getElementById('forgot-error');
+				const successDiv = document.getElementById('forgot-success');
+
+				if (!email) {
+					errorDiv.textContent = '请输入邮箱';
+					return;
+				}
+
+				try {
+					const {
+						error
+					} = await supabase.auth.resetPasswordForEmail(email, {
+						redirectTo: window.location.href,
+					});
+
+					if (error) throw error;
+
+					errorDiv.textContent = '';
+					successDiv.textContent = '重置密码邮件已发送，请检查您的邮箱。';
+				} catch (error) {
+					errorDiv.textContent = '发送重置邮件失败: ' + error.message;
+				}
+			});
+
+			// 重置密码功能
+			document.getElementById('btn-reset-password').addEventListener('click', async () => {
+				const newPassword = document.getElementById('reset-password').value;
+				const confirmPassword = document.getElementById('reset-confirm-password').value;
+				const errorDiv = document.getElementById('reset-error');
+				const successDiv = document.getElementById('reset-success');
+
+				if (newPassword.length < 6) {
+					errorDiv.textContent = '密码长度至少为6位';
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					errorDiv.textContent = '两次输入的密码不一致';
+					return;
+				}
+
+				try {
+					const {
+						error
+					} = await supabase.auth.updateUser({
+						password: newPassword
+					});
+
+					if (error) throw error;
+
+					errorDiv.textContent = '';
+					successDiv.textContent = '密码重置成功！';
+
+					// 3秒后返回登录页面
+					setTimeout(() => {
+						document.getElementById('reset-password-form').style.display = 'none';
+						document.getElementById('login-form').style.display = 'block';
+						successDiv.textContent = '';
+					}, 3000);
+				} catch (error) {
+					errorDiv.textContent = '密码重置失败: ' + error.message;
+				}
+			});
+
+			// 退出登录
+			document.getElementById('btn-menu-logout').addEventListener('click', () => {
+				logout(false);
+			});
+
+			// 用户头像点击事件
+			document.getElementById('user-avatar').addEventListener('click', () => {
+				const menu = document.getElementById('user-menu');
+				menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+			});
+
+			// 修改密码功能
+			document.getElementById('btn-change-password').addEventListener('click', () => {
+				document.getElementById('user-menu').style.display = 'none';
+				document.getElementById('change-password-modal').style.display = 'flex';
+			});
+
+			document.getElementById('btn-confirm-change-password').addEventListener('click', async () => {
+				const currentPassword = document.getElementById('current-password').value;
+				const newPassword = document.getElementById('new-password').value;
+				const confirmPassword = document.getElementById('confirm-new-password').value;
+				const errorDiv = document.getElementById('change-password-error');
+				const successDiv = document.getElementById('change-password-success');
+
+				if (!currentPassword || !newPassword || !confirmPassword) {
+					errorDiv.textContent = '请填写所有字段';
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					errorDiv.textContent = '新密码长度至少为6位';
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					errorDiv.textContent = '两次输入的新密码不一致';
+					return;
+				}
+
+				try {
+					// 验证当前密码
+					const {
+						data: {
+							user
+						}
+					} = await supabase.auth.getUser();
+					const {
+						error: signInError
+					} = await supabase.auth.signInWithPassword({
+						email: user.email,
+						password: currentPassword
+					});
+
+					if (signInError) {
+						errorDiv.textContent = '当前密码不正确';
+						return;
+					}
+
+					// 更新密码
+					const {
+						error
+					} = await supabase.auth.updateUser({
+						password: newPassword
+					});
+
+					if (error) throw error;
+
+					errorDiv.textContent = '';
+					successDiv.textContent = '密码修改成功！';
+
+					// 3秒后关闭弹窗
+					setTimeout(() => {
+						document.getElementById('change-password-modal').style.display = 'none';
+						successDiv.textContent = '';
+						// 清空表单
+						document.getElementById('current-password').value = '';
+						document.getElementById('new-password').value = '';
+						document.getElementById('confirm-new-password').value = '';
+					}, 3000);
+				} catch (error) {
+					errorDiv.textContent = '密码修改失败: ' + error.message;
+				}
+			});
+
+			// 关闭弹窗
+			document.getElementById('close-change-password').addEventListener('click', () => {
+				document.getElementById('change-password-modal').style.display = 'none';
+			});
+
+			// Enter键登录/注册
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					if (document.getElementById('login-form').style.display !== 'none') {
+						document.getElementById('btn-login').click();
+					} else if (document.getElementById('register-form').style.display !== 'none') {
+						document.getElementById('btn-register').click();
+					} else if (document.getElementById('forgot-password-form').style.display !== 'none') {
+						document.getElementById('btn-send-reset').click();
+					} else if (document.getElementById('reset-password-form').style.display !== 'none') {
+						document.getElementById('btn-reset-password').click();
+					}
+				}
+			});
+
+			// 用户活动监听
+			document.addEventListener('mousemove', resetActivityTimer);
+			document.addEventListener('keydown', resetActivityTimer);
+			document.addEventListener('click', resetActivityTimer);
+
+			// === 应用功能代码（保持不变）===
+			let items = [];
+			let editingId = null;
+
+			// 页面加载时初始化
+			document.addEventListener('DOMContentLoaded', async () => {
+				// 加载记住密码状态
+				loadRememberedAccounts();
+
+				// 检查登录状态
+				const isLoggedIn = await checkAuthStatus();
+
+				// 只有在用户登录后才初始化应用功能
+				if (isLoggedIn) {
+					// 初始化日期为今天
+					document.getElementById('date').valueAsDate = new Date();
+
+					// 初始化月份筛选器
+					initializeMonthFilter();
+
+					// 加载数据
+					loadItems();
+
+					// 添加事件监听器
+					document.getElementById('add-item').addEventListener('click', addItem);
+					document.getElementById('month-filter').addEventListener('change', filterItems);
+					document.getElementById('reimbursed-filter').addEventListener('change', filterItems);
+					document.getElementById('invoice-filter').addEventListener('change', filterItems);
+					document.getElementById('btn-monthly').addEventListener('click', showMonthlyStats);
+					document.getElementById('close-monthly').addEventListener('click', () => {
+						document.getElementById('monthly-modal').style.display = 'none';
+					});
+					document.getElementById('btn-import').addEventListener('click', () => {
+						document.getElementById('import-modal').style.display = 'flex';
+					});
+					document.getElementById('close-import').addEventListener('click', () => {
+						document.getElementById('import-modal').style.display = 'none';
+					});
+					document.getElementById('select-file').addEventListener('click', () => {
+						document.getElementById('file-input').click();
+					});
+					document.getElementById('file-input').addEventListener('change', handleFileSelect);
+					document.getElementById('confirm-import').addEventListener('click', importData);
+					document.getElementById('btn-export').addEventListener('click', exportData);
+					document.getElementById('btn-delete-all').addEventListener('click', deleteFilteredItems);
+				}
+			});
+
+			// 初始化月份筛选器
+			function initializeMonthFilter() {
+				const monthFilter = document.getElementById('month-filter');
+				const currentYear = new Date().getFullYear();
+
+				// 添加最近12个月
+				for (let i = 0; i < 12; i++) {
+					const date = new Date(currentYear, new Date().getMonth() - i, 1);
+					const year = date.getFullYear();
+					const month = date.getMonth() + 1;
+					const monthStr = month < 10 ? `0${month}` : month;
+					const value = `${year}-${monthStr}`;
+					const text = `${year}年${month}月`;
+
+					const option = document.createElement('option');
+					option.value = value;
+					option.textContent = text;
+					monthFilter.appendChild(option);
+				}
+			}
+
+			// 添加采购物品
+			async function addItem() {
+				const date = document.getElementById('date').value;
+				const itemName = document.getElementById('item-name').value;
+				const supplier = document.getElementById('supplier').value;
+				const amount = parseFloat(document.getElementById('amount').value);
+				const reimbursed = document.getElementById('reimbursed').value;
+
+				if (!date || !itemName || !supplier || isNaN(amount)) {
+					alert('请填写所有字段');
+					return;
+				}
+
+				const {
+					data: {
+						user
+					}
+				} = await supabase.auth.getUser();
+
+				const newItem = {
+					date,
+					item_name: itemName,
+					supplier,
+					amount,
+					reimbursed,
+					invoice_received: false,
+					user_id: user.id
+				};
+
+				try {
+					const {
+						data,
+						error
+					} = await supabase
+						.from('procurement_items')
+						.insert([newItem])
+						.select();
+
+					if (error) throw error;
+
+					// 清空表单
+					document.getElementById('item-name').value = '';
+					document.getElementById('supplier').value = '';
+					document.getElementById('amount').value = '';
+
+					// 重新加载数据
+					loadItems();
+				} catch (error) {
+					console.error('添加物品失败:', error);
+					alert('添加物品失败: ' + error.message);
+				}
+			}
+
+			// 加载采购物品
+			async function loadItems() {
+				try {
+					const {
+						data: {
+							user
+						}
+					} = await supabase.auth.getUser();
+
+					// 检查用户是否已登录
+					if (!user) {
+						console.log('用户未登录，跳过加载物品');
+						items = [];
+						displayItems(items);
+						updateStats();
+						return;
+					}
+
+					const {
+						data,
+						error
+					} = await supabase
+						.from('procurement_items')
+						.select('*')
+						.eq('user_id', user.id)
+						.order('date', {
+							ascending: false
+						});
+
+					if (error) throw error;
+
+					items = data || [];
+					displayItems(items);
+					updateStats();
+				} catch (error) {
+					console.error('加载物品失败:', error);
+					// 只在用户已登录时显示错误提示
+					const {
+						data: {
+							user
+						}
+					} = await supabase.auth.getUser();
+					if (user) {
+						alert('加载物品失败: ' + error.message);
+					}
+				}
+			}
+
+			// 显示采购物品
+			function displayItems(itemsToDisplay) {
+				const tableBody = document.getElementById('items-table');
+				tableBody.innerHTML = '';
+
+				itemsToDisplay.forEach((item, index) => {
+					const row = document.createElement('tr');
+
+					// 格式化日期
+					const dateObj = new Date(item.date);
+					const formattedDate =
+						`${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
+
+					// 格式化金额
+					const formattedAmount = `¥${item.amount.toFixed(2)}`;
+
+					row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${formattedDate}</td>
                     <td>${item.item_name}</td>
@@ -1707,462 +1770,500 @@
                         ${item.reimbursed === '未报销' ? `<button class="btn-reimburse" data-id="${item.id}">标记报销</button>` : ''}
                     </td>
                 `;
-                
-                tableBody.appendChild(row);
-            });
-            
-            // 添加事件监听器
-            document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', toggleInvoiceStatus);
-            });
-            
-            document.querySelectorAll('.btn-edit').forEach(button => {
-                button.addEventListener('click', editItem);
-            });
-            
-            document.querySelectorAll('.btn-delete').forEach(button => {
-                button.addEventListener('click', deleteItem);
-            });
-            
-            document.querySelectorAll('.btn-reimburse').forEach(button => {
-                button.addEventListener('click', markAsReimbursed);
-            });
-        }
 
-        // 切换发票状态
-        async function toggleInvoiceStatus(event) {
-            const itemId = event.target.dataset.id;
-            const invoiceReceived = event.target.checked;
-            
-            try {
-                const { error } = await supabase
-                    .from('procurement_items')
-                    .update({ invoice_received: invoiceReceived })
-                    .eq('id', itemId);
-                
-                if (error) throw error;
-                
-                // 更新本地数据
-                const itemIndex = items.findIndex(item => item.id == itemId);
-                if (itemIndex !== -1) {
-                    items[itemIndex].invoice_received = invoiceReceived;
-                }
-                
-                // 更新显示
-                displayItems(items);
-                updateStats();
-            } catch (error) {
-                console.error('更新发票状态失败:', error);
-                alert('更新发票状态失败: ' + error.message);
-                // 恢复复选框状态
-                event.target.checked = !invoiceReceived;
-            }
-        }
+					tableBody.appendChild(row);
+				});
 
-        // 编辑物品
-        function editItem(event) {
-            const itemId = event.target.dataset.id;
-            const item = items.find(item => item.id == itemId);
-            
-            if (item) {
-                // 填充表单
-                document.getElementById('date').value = item.date;
-                document.getElementById('item-name').value = item.item_name;
-                document.getElementById('supplier').value = item.supplier;
-                document.getElementById('amount').value = item.amount;
-                document.getElementById('reimbursed').value = item.reimbursed;
-                
-                // 更改按钮文本和功能
-                const addButton = document.getElementById('add-item');
-                addButton.textContent = '更新物品';
-                addButton.onclick = () => updateItem(itemId);
-                
-                editingId = itemId;
-            }
-        }
+				// 添加事件监听器
+				document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+					checkbox.addEventListener('change', toggleInvoiceStatus);
+				});
 
-        // 更新物品
-        async function updateItem(itemId) {
-            const date = document.getElementById('date').value;
-            const itemName = document.getElementById('item-name').value;
-            const supplier = document.getElementById('supplier').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const reimbursed = document.getElementById('reimbursed').value;
-            
-            if (!date || !itemName || !supplier || isNaN(amount)) {
-                alert('请填写所有字段');
-                return;
-            }
-            
-            try {
-                const { error } = await supabase
-                    .from('procurement_items')
-                    .update({
-                        date,
-                        item_name: itemName,
-                        supplier,
-                        amount,
-                        reimbursed
-                    })
-                    .eq('id', itemId);
-                
-                if (error) throw error;
-                
-                // 重置表单和按钮
-                document.getElementById('date').valueAsDate = new Date();
-                document.getElementById('item-name').value = '';
-                document.getElementById('supplier').value = '';
-                document.getElementById('amount').value = '';
-                document.getElementById('reimbursed').value = '未报销';
-                
-                const addButton = document.getElementById('add-item');
-                addButton.textContent = '添加物品';
-                addButton.onclick = addItem;
-                
-                editingId = null;
-                
-                // 重新加载数据
-                loadItems();
-            } catch (error) {
-                console.error('更新物品失败:', error);
-                alert('更新物品失败: ' + error.message);
-            }
-        }
+				document.querySelectorAll('.btn-edit').forEach(button => {
+					button.addEventListener('click', editItem);
+				});
 
-        // 删除物品
-        async function deleteItem(event) {
-            const itemId = event.target.dataset.id;
-            
-            if (!confirm('确定要删除这个物品吗？')) {
-                return;
-            }
-            
-            try {
-                const { error } = await supabase
-                    .from('procurement_items')
-                    .delete()
-                    .eq('id', itemId);
-                
-                if (error) throw error;
-                
-                // 重新加载数据
-                loadItems();
-            } catch (error) {
-                console.error('删除物品失败:', error);
-                alert('删除物品失败: ' + error.message);
-            }
-        }
+				document.querySelectorAll('.btn-delete').forEach(button => {
+					button.addEventListener('click', deleteItem);
+				});
 
-        // 标记为已报销
-        async function markAsReimbursed(event) {
-            const itemId = event.target.dataset.id;
-            
-            try {
-                const { error } = await supabase
-                    .from('procurement_items')
-                    .update({ reimbursed: '已报销' })
-                    .eq('id', itemId);
-                
-                if (error) throw error;
-                
-                // 重新加载数据
-                loadItems();
-            } catch (error) {
-                console.error('标记报销失败:', error);
-                alert('标记报销失败: ' + error.message);
-            }
-        }
+				document.querySelectorAll('.btn-reimburse').forEach(button => {
+					button.addEventListener('click', markAsReimbursed);
+				});
+			}
 
-        // 筛选物品
-        function filterItems() {
-            const monthFilter = document.getElementById('month-filter').value;
-            const reimbursedFilter = document.getElementById('reimbursed-filter').value;
-            const invoiceFilter = document.getElementById('invoice-filter').value;
-            
-            let filteredItems = items;
-            
-            // 按月筛选
-            if (monthFilter !== 'all') {
-                filteredItems = filteredItems.filter(item => {
-                    const itemMonth = item.date.substring(0, 7); // YYYY-MM
-                    return itemMonth === monthFilter;
-                });
-            }
-            
-            // 按报销状态筛选
-            if (reimbursedFilter !== 'all') {
-                filteredItems = filteredItems.filter(item => item.reimbursed === reimbursedFilter);
-            }
-            
-            // 按发票状态筛选
-            if (invoiceFilter !== 'all') {
-                const invoiceReceived = invoiceFilter === 'received';
-                filteredItems = filteredItems.filter(item => item.invoice_received === invoiceReceived);
-            }
-            
-            displayItems(filteredItems);
-        }
+			// 切换发票状态
+			async function toggleInvoiceStatus(event) {
+				const itemId = event.target.dataset.id;
+				const invoiceReceived = event.target.checked;
 
-        // 更新统计信息
-        function updateStats() {
-            // 剩余未报销金额和数量
-            const unreimbursedItems = items.filter(item => item.reimbursed === '未报销');
-            const remainingAmount = unreimbursedItems.reduce((sum, item) => sum + item.amount, 0);
-            const remainingCount = unreimbursedItems.length;
-            
-            // 月度总采购金额
-            const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
-            const monthlyItems = items.filter(item => item.date.substring(0, 7) === currentMonth);
-            const monthlyTotalAmount = monthlyItems.reduce((sum, item) => sum + item.amount, 0);
-            
-            document.getElementById('remaining-amount').textContent = `¥${remainingAmount.toFixed(2)}`;
-            document.getElementById('remaining-count').textContent = remainingCount;
-            document.getElementById('monthly-total-amount').textContent = `¥${monthlyTotalAmount.toFixed(2)}`;
-        }
+				try {
+					const {
+						error
+					} = await supabase
+						.from('procurement_items')
+						.update({
+							invoice_received: invoiceReceived
+						})
+						.eq('id', itemId);
 
-        // 显示月度统计
-        function showMonthlyStats() {
-            // 计算月度统计数据
-            const monthlyData = {};
-            
-            items.forEach(item => {
-                const month = item.date.substring(0, 7); // YYYY-MM
-                
-                if (!monthlyData[month]) {
-                    monthlyData[month] = {
-                        amount: 0,
-                        count: 0,
-                        unreimbursed: 0
-                    };
-                }
-                
-                monthlyData[month].amount += item.amount;
-                monthlyData[month].count += 1;
-                
-                if (item.reimbursed === '未报销') {
-                    monthlyData[month].unreimbursed += item.amount;
-                }
-            });
-            
-            // 计算总计
-            const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-            const totalCount = items.length;
-            const totalUnreimbursed = items
-                .filter(item => item.reimbursed === '未报销')
-                .reduce((sum, item) => sum + item.amount, 0);
-            
-            // 更新总计显示
-            document.getElementById('total-amount').textContent = `¥${totalAmount.toFixed(2)}`;
-            document.getElementById('total-count').textContent = totalCount;
-            document.getElementById('total-unreimbursed').textContent = `¥${totalUnreimbursed.toFixed(2)}`;
-            
-            // 更新月度表格
-            const monthlyTable = document.getElementById('monthly-table');
-            monthlyTable.innerHTML = '';
-            
-            // 按月份排序（从新到旧）
-            const sortedMonths = Object.keys(monthlyData).sort().reverse();
-            
-            sortedMonths.forEach(month => {
-                const data = monthlyData[month];
-                const row = document.createElement('tr');
-                
-                // 格式化月份显示
-                const [year, monthNum] = month.split('-');
-                const monthDisplay = `${year}年${parseInt(monthNum)}月`;
-                
-                row.innerHTML = `
+					if (error) throw error;
+
+					// 更新本地数据
+					const itemIndex = items.findIndex(item => item.id == itemId);
+					if (itemIndex !== -1) {
+						items[itemIndex].invoice_received = invoiceReceived;
+					}
+
+					// 更新显示
+					displayItems(items);
+					updateStats();
+				} catch (error) {
+					console.error('更新发票状态失败:', error);
+					alert('更新发票状态失败: ' + error.message);
+					// 恢复复选框状态
+					event.target.checked = !invoiceReceived;
+				}
+			}
+
+			// 编辑物品
+			function editItem(event) {
+				const itemId = event.target.dataset.id;
+				const item = items.find(item => item.id == itemId);
+
+				if (item) {
+					// 填充表单
+					document.getElementById('date').value = item.date;
+					document.getElementById('item-name').value = item.item_name;
+					document.getElementById('supplier').value = item.supplier;
+					document.getElementById('amount').value = item.amount;
+					document.getElementById('reimbursed').value = item.reimbursed;
+
+					// 更改按钮文本和功能
+					const addButton = document.getElementById('add-item');
+					addButton.textContent = '更新物品';
+					addButton.onclick = () => updateItem(itemId);
+
+					editingId = itemId;
+				}
+			}
+
+			// 更新物品
+			async function updateItem(itemId) {
+				const date = document.getElementById('date').value;
+				const itemName = document.getElementById('item-name').value;
+				const supplier = document.getElementById('supplier').value;
+				const amount = parseFloat(document.getElementById('amount').value);
+				const reimbursed = document.getElementById('reimbursed').value;
+
+				if (!date || !itemName || !supplier || isNaN(amount)) {
+					alert('请填写所有字段');
+					return;
+				}
+
+				try {
+					const {
+						error
+					} = await supabase
+						.from('procurement_items')
+						.update({
+							date,
+							item_name: itemName,
+							supplier,
+							amount,
+							reimbursed
+						})
+						.eq('id', itemId);
+
+					if (error) throw error;
+
+					// 重置表单和按钮
+					document.getElementById('date').valueAsDate = new Date();
+					document.getElementById('item-name').value = '';
+					document.getElementById('supplier').value = '';
+					document.getElementById('amount').value = '';
+					document.getElementById('reimbursed').value = '未报销';
+
+					const addButton = document.getElementById('add-item');
+					addButton.textContent = '添加物品';
+					addButton.onclick = addItem;
+
+					editingId = null;
+
+					// 重新加载数据
+					loadItems();
+				} catch (error) {
+					console.error('更新物品失败:', error);
+					alert('更新物品失败: ' + error.message);
+				}
+			}
+
+			// 删除物品
+			async function deleteItem(event) {
+				const itemId = event.target.dataset.id;
+
+				if (!confirm('确定要删除这个物品吗？')) {
+					return;
+				}
+
+				try {
+					const {
+						error
+					} = await supabase
+						.from('procurement_items')
+						.delete()
+						.eq('id', itemId);
+
+					if (error) throw error;
+
+					// 重新加载数据
+					loadItems();
+				} catch (error) {
+					console.error('删除物品失败:', error);
+					alert('删除物品失败: ' + error.message);
+				}
+			}
+
+			// 标记为已报销
+			async function markAsReimbursed(event) {
+				const itemId = event.target.dataset.id;
+
+				try {
+					const {
+						error
+					} = await supabase
+						.from('procurement_items')
+						.update({
+							reimbursed: '已报销'
+						})
+						.eq('id', itemId);
+
+					if (error) throw error;
+
+					// 重新加载数据
+					loadItems();
+				} catch (error) {
+					console.error('标记报销失败:', error);
+					alert('标记报销失败: ' + error.message);
+				}
+			}
+
+			// 筛选物品
+			function filterItems() {
+				const monthFilter = document.getElementById('month-filter').value;
+				const reimbursedFilter = document.getElementById('reimbursed-filter').value;
+				const invoiceFilter = document.getElementById('invoice-filter').value;
+
+				let filteredItems = items;
+
+				// 按月筛选
+				if (monthFilter !== 'all') {
+					filteredItems = filteredItems.filter(item => {
+						const itemMonth = item.date.substring(0, 7); // YYYY-MM
+						return itemMonth === monthFilter;
+					});
+				}
+
+				// 按报销状态筛选
+				if (reimbursedFilter !== 'all') {
+					filteredItems = filteredItems.filter(item => item.reimbursed === reimbursedFilter);
+				}
+
+				// 按发票状态筛选
+				if (invoiceFilter !== 'all') {
+					const invoiceReceived = invoiceFilter === 'received';
+					filteredItems = filteredItems.filter(item => item.invoice_received === invoiceReceived);
+				}
+
+				displayItems(filteredItems);
+			}
+
+			// 更新统计信息
+			function updateStats() {
+				// 剩余未报销金额和数量
+				const unreimbursedItems = items.filter(item => item.reimbursed === '未报销');
+				const remainingAmount = unreimbursedItems.reduce((sum, item) => sum + item.amount, 0);
+				const remainingCount = unreimbursedItems.length;
+
+				// 月度总采购金额
+				const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
+				const monthlyItems = items.filter(item => item.date.substring(0, 7) === currentMonth);
+				const monthlyTotalAmount = monthlyItems.reduce((sum, item) => sum + item.amount, 0);
+
+				document.getElementById('remaining-amount').textContent = `¥${remainingAmount.toFixed(2)}`;
+				document.getElementById('remaining-count').textContent = remainingCount;
+				document.getElementById('monthly-total-amount').textContent = `¥${monthlyTotalAmount.toFixed(2)}`;
+			}
+
+			// 显示月度统计
+			function showMonthlyStats() {
+				// 计算月度统计数据
+				const monthlyData = {};
+
+				items.forEach(item => {
+					const month = item.date.substring(0, 7); // YYYY-MM
+
+					if (!monthlyData[month]) {
+						monthlyData[month] = {
+							amount: 0,
+							count: 0,
+							unreimbursed: 0
+						};
+					}
+
+					monthlyData[month].amount += item.amount;
+					monthlyData[month].count += 1;
+
+					if (item.reimbursed === '未报销') {
+						monthlyData[month].unreimbursed += item.amount;
+					}
+				});
+
+				// 计算总计
+				const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+				const totalCount = items.length;
+				const totalUnreimbursed = items
+					.filter(item => item.reimbursed === '未报销')
+					.reduce((sum, item) => sum + item.amount, 0);
+
+				// 更新总计显示
+				document.getElementById('total-amount').textContent = `¥${totalAmount.toFixed(2)}`;
+				document.getElementById('total-count').textContent = totalCount;
+				document.getElementById('total-unreimbursed').textContent = `¥${totalUnreimbursed.toFixed(2)}`;
+
+				// 更新月度表格
+				const monthlyTable = document.getElementById('monthly-table');
+				monthlyTable.innerHTML = '';
+
+				// 按月份排序（从新到旧）
+				const sortedMonths = Object.keys(monthlyData).sort().reverse();
+
+				sortedMonths.forEach(month => {
+					const data = monthlyData[month];
+					const row = document.createElement('tr');
+
+					// 格式化月份显示
+					const [year, monthNum] = month.split('-');
+					const monthDisplay = `${year}年${parseInt(monthNum)}月`;
+
+					row.innerHTML = `
                     <td>${monthDisplay}</td>
                     <td>¥${data.amount.toFixed(2)}</td>
                     <td>${data.count}</td>
                     <td>¥${data.unreimbursed.toFixed(2)}</td>
                 `;
-                
-                monthlyTable.appendChild(row);
-            });
-            
-            // 显示弹窗
-            document.getElementById('monthly-modal').style.display = 'flex';
-        }
 
-        // 文件选择处理
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            const fileInfo = document.getElementById('file-info');
-            const confirmButton = document.getElementById('confirm-import');
-            
-            if (file) {
-                fileInfo.textContent = `已选择: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-                confirmButton.style.display = 'block';
-            } else {
-                fileInfo.textContent = '未选择文件';
-                confirmButton.style.display = 'none';
-            }
-        }
+					monthlyTable.appendChild(row);
+				});
 
-        // 导入数据
-        async function importData() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('请先选择文件');
-                return;
-            }
-            
-            const reader = new FileReader();
-            
-            reader.onload = async function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    // 验证数据格式
-                    if (!Array.isArray(importedData)) {
-                        throw new Error('数据格式不正确，应为数组');
-                    }
-                    
-                    // 获取当前用户ID
-                    const { data: { user } } = await supabase.auth.getUser();
-                    
-                    // 为导入的数据添加用户ID
-                    const dataWithUserId = importedData.map(item => ({
-                        ...item,
-                        user_id: user.id
-                    }));
-                    
-                    // 删除现有数据
-                    const { error: deleteError } = await supabase
-                        .from('procurement_items')
-                        .delete()
-                        .eq('user_id', user.id);
-                    
-                    if (deleteError) throw deleteError;
-                    
-                    // 插入新数据
-                    const { error: insertError } = await supabase
-                        .from('procurement_items')
-                        .insert(dataWithUserId);
-                    
-                    if (insertError) throw insertError;
-                    
-                    alert('数据导入成功！');
-                    document.getElementById('import-modal').style.display = 'none';
-                    loadItems();
-                } catch (error) {
-                    console.error('导入数据失败:', error);
-                    alert('导入数据失败: ' + error.message);
-                }
-            };
-            
-            reader.readAsText(file);
-        }
+				// 显示弹窗
+				document.getElementById('monthly-modal').style.display = 'flex';
+			}
 
-        // 导出数据
-        async function exportData() {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                const { data, error } = await supabase
-                    .from('procurement_items')
-                    .select('*')
-                    .eq('user_id', user.id);
-                
-                if (error) throw error;
-                
-                // 创建数据副本，移除用户ID
-                const exportData = data.map(item => {
-                    const { user_id, ...itemWithoutUserId } = item;
-                    return itemWithoutUserId;
-                });
-                
-                const dataStr = JSON.stringify(exportData, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `采购数据_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            } catch (error) {
-                console.error('导出数据失败:', error);
-                alert('导出数据失败: ' + error.message);
-            }
-        }
+			// 文件选择处理
+			function handleFileSelect(event) {
+				const file = event.target.files[0];
+				const fileInfo = document.getElementById('file-info');
+				const confirmButton = document.getElementById('confirm-import');
 
-        // 删除筛选后的数据
-        async function deleteFilteredItems() {
-            const monthFilter = document.getElementById('month-filter').value;
-            const reimbursedFilter = document.getElementById('reimbursed-filter').value;
-            const invoiceFilter = document.getElementById('invoice-filter').value;
-            
-            // 构建筛选条件
-            let conditions = [];
-            
-            if (monthFilter !== 'all') {
-                conditions.push(`date.startsWith."${monthFilter}"`);
-            }
-            
-            if (reimbursedFilter !== 'all') {
-                conditions.push(`reimbursed.eq."${reimbursedFilter}"`);
-            }
-            
-            if (invoiceFilter !== 'all') {
-                const invoiceReceived = invoiceFilter === 'received';
-                conditions.push(`invoice_received.eq.${invoiceReceived}`);
-            }
-            
-            if (conditions.length === 0) {
-                if (!confirm('确定要删除所有采购记录吗？此操作不可撤销！')) {
-                    return;
-                }
-            } else {
-                const filterDesc = [
-                    monthFilter !== 'all' ? `月份: ${monthFilter}` : '',
-                    reimbursedFilter !== 'all' ? `报销状态: ${reimbursedFilter}` : '',
-                    invoiceFilter !== 'all' ? `发票状态: ${invoiceFilter === 'received' ? '已获得' : '未获得'}` : ''
-                ].filter(Boolean).join(', ');
-                
-                if (!confirm(`确定要删除${filterDesc}的所有采购记录吗？此操作不可撤销！`)) {
-                    return;
-                }
-            }
-            
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                let query = supabase
-                    .from('procurement_items')
-                    .delete()
-                    .eq('user_id', user.id);
-                
-                // 应用筛选条件
-                if (monthFilter !== 'all') {
-                    query = query.like('date', `${monthFilter}%`);
-                }
-                
-                if (reimbursedFilter !== 'all') {
-                    query = query.eq('reimbursed', reimbursedFilter);
-                }
-                
-                if (invoiceFilter !== 'all') {
-                    const invoiceReceived = invoiceFilter === 'received';
-                    query = query.eq('invoice_received', invoiceReceived);
-                }
-                
-                const { error } = await query;
-                
-                if (error) throw error;
-                
-                alert('删除成功！');
-                loadItems();
-            } catch (error) {
-                console.error('删除数据失败:', error);
-                alert('删除数据失败: ' + error.message);
-            }
-        }
-    </script>
-</body>
+				if (file) {
+					fileInfo.textContent = `已选择: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+					confirmButton.style.display = 'block';
+				} else {
+					fileInfo.textContent = '未选择文件';
+					confirmButton.style.display = 'none';
+				}
+			}
+
+			// 导入数据
+			async function importData() {
+				const fileInput = document.getElementById('file-input');
+				const file = fileInput.files[0];
+
+				if (!file) {
+					alert('请先选择文件');
+					return;
+				}
+
+				const reader = new FileReader();
+
+				reader.onload = async function(e) {
+					try {
+						const importedData = JSON.parse(e.target.result);
+
+						// 验证数据格式
+						if (!Array.isArray(importedData)) {
+							throw new Error('数据格式不正确，应为数组');
+						}
+
+						// 获取当前用户ID
+						const {
+							data: {
+								user
+							}
+						} = await supabase.auth.getUser();
+
+						// 为导入的数据添加用户ID
+						const dataWithUserId = importedData.map(item => ({
+							...item,
+							user_id: user.id
+						}));
+
+						// 删除现有数据
+						const {
+							error: deleteError
+						} = await supabase
+							.from('procurement_items')
+							.delete()
+							.eq('user_id', user.id);
+
+						if (deleteError) throw deleteError;
+
+						// 插入新数据
+						const {
+							error: insertError
+						} = await supabase
+							.from('procurement_items')
+							.insert(dataWithUserId);
+
+						if (insertError) throw insertError;
+
+						alert('数据导入成功！');
+						document.getElementById('import-modal').style.display = 'none';
+						loadItems();
+					} catch (error) {
+						console.error('导入数据失败:', error);
+						alert('导入数据失败: ' + error.message);
+					}
+				};
+
+				reader.readAsText(file);
+			}
+
+			// 导出数据
+			async function exportData() {
+				try {
+					const {
+						data: {
+							user
+						}
+					} = await supabase.auth.getUser();
+
+					const {
+						data,
+						error
+					} = await supabase
+						.from('procurement_items')
+						.select('*')
+						.eq('user_id', user.id);
+
+					if (error) throw error;
+
+					// 创建数据副本，移除用户ID
+					const exportData = data.map(item => {
+						const {
+							user_id,
+							...itemWithoutUserId
+						} = item;
+						return itemWithoutUserId;
+					});
+
+					const dataStr = JSON.stringify(exportData, null, 2);
+					const dataBlob = new Blob([dataStr], {
+						type: 'application/json'
+					});
+
+					const url = URL.createObjectURL(dataBlob);
+					const link = document.createElement('a');
+					link.href = url;
+					link.download = `采购数据_${new Date().toISOString().split('T')[0]}.json`;
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+					URL.revokeObjectURL(url);
+				} catch (error) {
+					console.error('导出数据失败:', error);
+					alert('导出数据失败: ' + error.message);
+				}
+			}
+
+			// 删除筛选后的数据
+			async function deleteFilteredItems() {
+				const monthFilter = document.getElementById('month-filter').value;
+				const reimbursedFilter = document.getElementById('reimbursed-filter').value;
+				const invoiceFilter = document.getElementById('invoice-filter').value;
+
+				// 构建筛选条件
+				let conditions = [];
+
+				if (monthFilter !== 'all') {
+					conditions.push(`date.startsWith."${monthFilter}"`);
+				}
+
+				if (reimbursedFilter !== 'all') {
+					conditions.push(`reimbursed.eq."${reimbursedFilter}"`);
+				}
+
+				if (invoiceFilter !== 'all') {
+					const invoiceReceived = invoiceFilter === 'received';
+					conditions.push(`invoice_received.eq.${invoiceReceived}`);
+				}
+
+				if (conditions.length === 0) {
+					if (!confirm('确定要删除所有采购记录吗？此操作不可撤销！')) {
+						return;
+					}
+				} else {
+					const filterDesc = [
+						monthFilter !== 'all' ? `月份: ${monthFilter}` : '',
+						reimbursedFilter !== 'all' ? `报销状态: ${reimbursedFilter}` : '',
+						invoiceFilter !== 'all' ? `发票状态: ${invoiceFilter === 'received' ? '已获得' : '未获得'}` : ''
+					].filter(Boolean).join(', ');
+
+					if (!confirm(`确定要删除${filterDesc}的所有采购记录吗？此操作不可撤销！`)) {
+						return;
+					}
+				}
+
+				try {
+					const {
+						data: {
+							user
+						}
+					} = await supabase.auth.getUser();
+
+					let query = supabase
+						.from('procurement_items')
+						.delete()
+						.eq('user_id', user.id);
+
+					// 应用筛选条件
+					if (monthFilter !== 'all') {
+						query = query.like('date', `${monthFilter}%`);
+					}
+
+					if (reimbursedFilter !== 'all') {
+						query = query.eq('reimbursed', reimbursedFilter);
+					}
+
+					if (invoiceFilter !== 'all') {
+						const invoiceReceived = invoiceFilter === 'received';
+						query = query.eq('invoice_received', invoiceReceived);
+					}
+
+					const {
+						error
+					} = await query;
+
+					if (error) throw error;
+
+					alert('删除成功！');
+					loadItems();
+				} catch (error) {
+					console.error('删除数据失败:', error);
+					alert('删除数据失败: ' + error.message);
+				}
+			}
+		</script>
+	</body>
 </html>
