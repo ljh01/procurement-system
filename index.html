@@ -1221,7 +1221,7 @@
 					const {
 						error
 					} = await supabase.auth.resetPasswordForEmail(email, {
-						redirectTo: 'http://localhost:3000',
+						redirectTo: 'https://procurement-system-ten.vercel.app/',
 					});
 
 					if (error) throw error;
@@ -2229,4 +2229,5 @@
 			init();
 		</script>
 	</body>
+
 </html>
