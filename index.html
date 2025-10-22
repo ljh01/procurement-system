@@ -67,17 +67,6 @@
 				font-size: 16px;
 			}
 
-			.remember-password {
-				display: flex;
-				align-items: center;
-				margin-bottom: 20px;
-			}
-
-			.remember-password input {
-				width: auto;
-				margin-right: 8px;
-			}
-
 			.btn-login,
 			.btn-register,
 			.btn-forgot-password {
@@ -779,10 +768,6 @@
 						<label for="login-password">密码</label>
 						<input type="password" id="login-password" placeholder="输入密码">
 					</div>
-					<div class="remember-password">
-						<input type="checkbox" id="remember-password">
-						<label for="remember-password">记住密码</label>
-					</div>
 					<div id="login-error" class="error-message"></div>
 					<button class="btn-login" id="btn-login">登录</button>
 					<button class="btn-forgot-password" id="btn-forgot-password">忘记密码</button>
@@ -800,10 +785,6 @@
 					<div class="form-group">
 						<label for="register-password">密码</label>
 						<input type="password" id="register-password" placeholder="输入密码（至少6位）">
-					</div>
-					<div class="remember-password">
-						<input type="checkbox" id="register-remember-password">
-						<label for="register-remember-password">记住密码</label>
 					</div>
 					<div id="register-error" class="error-message"></div>
 					<div id="register-success" class="success-message"></div>
@@ -1058,104 +1039,85 @@
 			// 初始化Supabase客户端
 			const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-			// === 登录状态管理 ===
+
+			// === 添加会话超时管理 ===
 			const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟不活动自动退出
 			let lastActivityTime = Date.now();
-			let activityTimer;
+			let inactivityTimer;
 
-			// 记住密码功能
-			const REMEMBERED_ACCOUNTS_KEY = 'remembered_accounts';
-			let rememberedAccounts = {};
-
-			// 加载保存的记住密码状态
-			function loadRememberedAccounts() {
-				const stored = localStorage.getItem(REMEMBERED_ACCOUNTS_KEY);
-				if (stored) {
-					rememberedAccounts = JSON.parse(stored);
-				}
-			}
-
-			// 保存记住密码状态
-			function saveRememberedAccounts() {
-				localStorage.setItem(REMEMBERED_ACCOUNTS_KEY, JSON.stringify(rememberedAccounts));
-			}
-
-			// 更新记住密码状态
-			function updateRememberedAccount(email, password, remember) {
-				if (remember) {
-					rememberedAccounts[email] = {
-						password: password,
-						remember: true
-					};
-				} else {
-					delete rememberedAccounts[email];
-				}
-				saveRememberedAccounts();
-			}
-
-			// 获取保存的密码
-			function getRememberedPassword(email) {
-				return rememberedAccounts[email] ? rememberedAccounts[email].password : '';
-			}
-
-			// 获取记住状态
-			function getRememberedStatus(email) {
-				return rememberedAccounts[email] ? rememberedAccounts[email].remember : false;
-			}
-
-			// 邮箱变化时更新密码和记住状态
-			function updatePasswordAndRememberStatus(email) {
-				const password = getRememberedPassword(email);
-				const remember = getRememberedStatus(email);
-
-				document.getElementById('login-password').value = password;
-				document.getElementById('remember-password').checked = remember;
-
-				// 更新注册表单的状态
-				document.getElementById('register-remember-password').checked = remember;
-			}
-
-			// 用户活动检测
-			function resetActivityTimer() {
+			// 更新活动时间
+			function updateActivityTime() {
 				lastActivityTime = Date.now();
-				if (activityTimer) {
-					clearTimeout(activityTimer);
-				}
-				activityTimer = setTimeout(checkSessionTimeout, SESSION_TIMEOUT);
 			}
 
-			// 检查会话超时
+			// 检查会话是否超时
 			function checkSessionTimeout() {
 				const currentTime = Date.now();
 				const inactiveTime = currentTime - lastActivityTime;
 
-				if (inactiveTime >= SESSION_TIMEOUT) {
-					// 自动退出
-					logout(true);
-				} else {
-					// 重新设置定时器
-					const remainingTime = SESSION_TIMEOUT - inactiveTime;
-					activityTimer = setTimeout(checkSessionTimeout, remainingTime);
+				if (inactiveTime > SESSION_TIMEOUT) {
+					// 会话超时，自动退出
+					handleAutoLogout('长时间未操作，请重新登录');
 				}
 			}
 
-			// 退出登录
-			async function logout(isTimeout = false) {
-				try {
-					await supabase.auth.signOut();
-					// 清除会话存储
-					sessionStorage.removeItem('supabase.auth.token');
-					showLoginPage();
-
-					if (isTimeout) {
-						alert('由于长时间未活动，已自动退出登录。');
-					}
-				} catch (error) {
-					console.error('退出登录失败:', error);
+			// 设置不活动检测
+			function setupInactivityDetection() {
+				// 清除现有计时器
+				if (inactivityTimer) {
+					clearInterval(inactivityTimer);
 				}
+
+				// 更新初始活动时间
+				updateActivityTime();
+
+				// 设置用户活动监听
+				const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+				activityEvents.forEach(event => {
+					document.addEventListener(event, updateActivityTime, true);
+				});
+
+				// 每分钟检查一次会话超时
+				inactivityTimer = setInterval(checkSessionTimeout, 60000);
 			}
 
-			// === 密码重置处理函数 ===
+			// 自动退出处理
+			async function handleAutoLogout(message) {
+				if (inactivityTimer) {
+					clearInterval(inactivityTimer);
+					inactivityTimer = null;
+				}
+
+				// 清除本地存储的会话
+				sessionStorage.removeItem('supabase.auth.token');
+
+				// 退出登录
+				await supabase.auth.signOut();
+
+				// 显示提示信息
+				if (message) {
+					alert(message);
+				}
+
+				showLoginPage();
+			}
+
+			// 立即退出登录函数
+			async function logoutImmediately() {
+				if (inactivityTimer) {
+					clearInterval(inactivityTimer);
+					inactivityTimer = null;
+				}
+
+				// 清除本地存储
+				sessionStorage.removeItem('supabase.auth.token');
+
+				// 退出登录
+				await supabase.auth.signOut();
+				showLoginPage();
+			}
+
+			// === 添加密码重置处理函数 ===
 			async function handlePasswordReset() {
 				const urlParams = new URLSearchParams(window.location.hash.substring(1));
 				const type = urlParams.get('type');
@@ -1172,261 +1134,44 @@
 			function showResetPasswordForm() {
 				// 创建或显示重置密码表单
 				const resetFormHTML = `
-                <div class="login-container">
-                  <div class="login-box">
-                    <h2 class="login-title">设置新密码</h2>
-                    <div class="form-group">
-                      <label for="new-password">新密码</label>
-                      <input type="password" id="new-password" placeholder="输入新密码（至少6位）">
-                    </div>
-                    <div class="form-group">
-                      <label for="confirm-new-password">确认新密码</label>
-                      <input type="password" id="confirm-new-password" placeholder="再次输入新密码">
-                    </div>
-                    <div id="reset-error" class="error-message"></div>
-                    <button class="btn-login" id="btn-reset-password">重置密码</button>
-                  </div>
-                </div>
-            `;
+			    <div class="login-container">
+			      <div class="login-box">
+			        <h2 class="login-title">设置新密码</h2>
+			        <div class="form-group">
+			          <label for="new-password">新密码</label>
+			          <input type="password" id="new-password" placeholder="输入新密码（至少6位）">
+			        </div>
+			        <div class="form-group">
+			          <label for="confirm-new-password">确认新密码</label>
+			          <input type="password" id="confirm-new-password" placeholder="再次输入新密码">
+			        </div>
+			        <div id="reset-password-error" class="error-message"></div>
+			        <div id="reset-password-success" class="success-message"></div>
+			        <button class="btn-login" id="btn-confirm-reset">确认重置</button>
+			      </div>
+			    </div>
+			  `;
 
+				// 替换页面内容
 				document.body.innerHTML = resetFormHTML;
 
-				document.getElementById('btn-reset-password').addEventListener('click', async () => {
-					const newPassword = document.getElementById('new-password').value;
-					const confirmPassword = document.getElementById('confirm-new-password').value;
-					const errorDiv = document.getElementById('reset-error');
-
-					if (newPassword.length < 6) {
-						errorDiv.textContent = '密码长度至少为6位';
-						return;
-					}
-
-					if (newPassword !== confirmPassword) {
-						errorDiv.textContent = '两次输入的密码不一致';
-						return;
-					}
-
-					try {
-						const {
-							error
-						} = await supabase.auth.updateUser({
-							password: newPassword
-						});
-
-						if (error) throw error;
-
-						errorDiv.textContent = '';
-						alert('密码重置成功，请使用新密码登录');
-						window.location.href = window.location.origin + window.location.pathname;
-					} catch (error) {
-						errorDiv.textContent = '密码重置失败: ' + error.message;
-					}
-				});
+				// 添加事件监听
+				document.getElementById('btn-confirm-reset').addEventListener('click', confirmPasswordReset);
 			}
 
-			// === 登录状态检查 ===
-			async function checkAuthStatus() {
-				try {
-					const {
-						data: {
-							session
-						},
-						error
-					} = await supabase.auth.getSession();
+			async function confirmPasswordReset() {
+				const newPassword = document.getElementById('new-password').value;
+				const confirmPassword = document.getElementById('confirm-new-password').value;
+				const errorDiv = document.getElementById('reset-password-error');
+				const successDiv = document.getElementById('reset-password-success');
 
-					if (error) throw error;
-
-					if (session) {
-						// 用户已登录
-						showAppPage(session.user);
-						resetActivityTimer();
-						return true;
-					}
-
-					// 检查是否有密码重置请求
-					if (await handlePasswordReset()) {
-						return false;
-					}
-
-					// 用户未登录
-					showLoginPage();
-					return false;
-				} catch (error) {
-					console.error('检查登录状态失败:', error);
-					showLoginPage();
-					return false;
-				}
-			}
-
-			// === 页面显示控制 ===
-			function showLoginPage() {
-				document.getElementById('login-page').style.display = 'flex';
-				document.getElementById('app-container').style.display = 'none';
-			}
-
-			function showAppPage(user) {
-				document.getElementById('login-page').style.display = 'none';
-				document.getElementById('app-container').style.display = 'block';
-
-				// 更新用户信息
-				document.getElementById('user-name').textContent = user.email;
-				document.getElementById('user-avatar').textContent = user.email.charAt(0).toUpperCase();
-
-				// 加载数据
-				loadItems();
-			}
-
-			// === 登录/注册功能 ===
-			document.getElementById('show-register').addEventListener('click', () => {
-				document.getElementById('login-form').style.display = 'none';
-				document.getElementById('register-form').style.display = 'block';
-			});
-
-			document.getElementById('show-login').addEventListener('click', () => {
-				document.getElementById('register-form').style.display = 'none';
-				document.getElementById('login-form').style.display = 'block';
-			});
-
-			document.getElementById('btn-forgot-password').addEventListener('click', () => {
-				document.getElementById('login-form').style.display = 'none';
-				document.getElementById('forgot-password-form').style.display = 'block';
-			});
-
-			document.getElementById('show-login-from-forgot').addEventListener('click', () => {
-				document.getElementById('forgot-password-form').style.display = 'none';
-				document.getElementById('login-form').style.display = 'block';
-			});
-
-			document.getElementById('show-login-from-reset').addEventListener('click', () => {
-				document.getElementById('reset-password-form').style.display = 'none';
-				document.getElementById('login-form').style.display = 'block';
-			});
-
-			// 邮箱输入框事件 - 自动填充密码和记住状态
-			document.getElementById('login-email').addEventListener('change', function() {
-				updatePasswordAndRememberStatus(this.value);
-			});
-
-			document.getElementById('register-email').addEventListener('change', function() {
-				updatePasswordAndRememberStatus(this.value);
-			});
-
-			// 登录功能
-			document.getElementById('btn-login').addEventListener('click', async () => {
-				const email = document.getElementById('login-email').value;
-				const password = document.getElementById('login-password').value;
-				const remember = document.getElementById('remember-password').checked;
-				const errorDiv = document.getElementById('login-error');
-
-				if (!email || !password) {
-					errorDiv.textContent = '请输入邮箱和密码';
+				if (!newPassword || !confirmPassword) {
+					errorDiv.textContent = '请填写所有字段';
 					return;
 				}
-
-				try {
-					const {
-						data,
-						error
-					} = await supabase.auth.signInWithPassword({
-						email,
-						password
-					});
-
-					if (error) throw error;
-
-					// 更新记住密码状态
-					updateRememberedAccount(email, password, remember);
-
-					errorDiv.textContent = '';
-					showAppPage(data.user);
-					resetActivityTimer();
-				} catch (error) {
-					errorDiv.textContent = '登录失败: ' + error.message;
-				}
-			});
-
-			// 注册功能
-			document.getElementById('btn-register').addEventListener('click', async () => {
-				const email = document.getElementById('register-email').value;
-				const password = document.getElementById('register-password').value;
-				const remember = document.getElementById('register-remember-password').checked;
-				const errorDiv = document.getElementById('register-error');
-				const successDiv = document.getElementById('register-success');
-
-				if (!email || !password) {
-					errorDiv.textContent = '请输入邮箱和密码';
-					return;
-				}
-
-				if (password.length < 6) {
-					errorDiv.textContent = '密码长度至少为6位';
-					return;
-				}
-
-				try {
-					const {
-						data,
-						error
-					} = await supabase.auth.signUp({
-						email,
-						password
-					});
-
-					if (error) throw error;
-
-					// 更新记住密码状态
-					updateRememberedAccount(email, password, remember);
-
-					errorDiv.textContent = '';
-					successDiv.textContent = '注册成功！请检查您的邮箱以验证账户。';
-
-					// 3秒后返回登录页面
-					setTimeout(() => {
-						document.getElementById('register-form').style.display = 'none';
-						document.getElementById('login-form').style.display = 'block';
-						successDiv.textContent = '';
-					}, 3000);
-				} catch (error) {
-					errorDiv.textContent = '注册失败: ' + error.message;
-				}
-			});
-
-			// 忘记密码功能
-			document.getElementById('btn-send-reset').addEventListener('click', async () => {
-				const email = document.getElementById('forgot-email').value;
-				const errorDiv = document.getElementById('forgot-error');
-				const successDiv = document.getElementById('forgot-success');
-
-				if (!email) {
-					errorDiv.textContent = '请输入邮箱';
-					return;
-				}
-
-				try {
-					const {
-						error
-					} = await supabase.auth.resetPasswordForEmail(email, {
-						redirectTo: window.location.href,
-					});
-
-					if (error) throw error;
-
-					errorDiv.textContent = '';
-					successDiv.textContent = '重置密码邮件已发送，请检查您的邮箱。';
-				} catch (error) {
-					errorDiv.textContent = '发送重置邮件失败: ' + error.message;
-				}
-			});
-
-			// 重置密码功能
-			document.getElementById('btn-reset-password').addEventListener('click', async () => {
-				const newPassword = document.getElementById('reset-password').value;
-				const confirmPassword = document.getElementById('reset-confirm-password').value;
-				const errorDiv = document.getElementById('reset-error');
-				const successDiv = document.getElementById('reset-success');
 
 				if (newPassword.length < 6) {
-					errorDiv.textContent = '密码长度至少为6位';
+					errorDiv.textContent = '密码至少需要6位';
 					return;
 				}
 
@@ -1444,79 +1189,236 @@
 
 					if (error) throw error;
 
+					successDiv.textContent = '密码重置成功！正在跳转到登录页面...';
 					errorDiv.textContent = '';
-					successDiv.textContent = '密码重置成功！';
 
-					// 3秒后返回登录页面
-					setTimeout(() => {
-						document.getElementById('reset-password-form').style.display = 'none';
-						document.getElementById('login-form').style.display = 'block';
-						successDiv.textContent = '';
-					}, 3000);
+					// 重置后清除会话，跳转到登录页面
+					setTimeout(async () => {
+						await logoutImmediately();
+					}, 2000);
+
 				} catch (error) {
-					errorDiv.textContent = '密码重置失败: ' + error.message;
+					errorDiv.textContent = '重置失败: ' + error.message;
+					successDiv.textContent = '';
 				}
+			}
+			// === 密码重置处理函数结束 ===
+
+			// 登录相关DOM元素
+			const loginPage = document.getElementById('login-page');
+			const appContainer = document.getElementById('app-container');
+			const loginForm = document.getElementById('login-form');
+			const registerForm = document.getElementById('register-form');
+			const forgotPasswordForm = document.getElementById('forgot-password-form');
+			const resetPasswordForm = document.getElementById('reset-password-form');
+			const showRegister = document.getElementById('show-register');
+			const showLogin = document.getElementById('show-login');
+			const showLoginFromForgot = document.getElementById('show-login-from-forgot');
+			const showLoginFromReset = document.getElementById('show-login-from-reset');
+			const btnLogin = document.getElementById('btn-login');
+			const btnRegister = document.getElementById('btn-register');
+			const btnForgotPassword = document.getElementById('btn-forgot-password');
+			const btnSendReset = document.getElementById('btn-send-reset');
+			const btnResetPassword = document.getElementById('btn-reset-password');
+			const userAvatar = document.getElementById('user-avatar');
+			const userName = document.getElementById('user-name');
+			const userMenu = document.getElementById('user-menu');
+			const btnChangePassword = document.getElementById('btn-change-password');
+			const btnMenuLogout = document.getElementById('btn-menu-logout');
+			const loginError = document.getElementById('login-error');
+			const registerError = document.getElementById('register-error');
+			const registerSuccess = document.getElementById('register-success');
+			const forgotError = document.getElementById('forgot-error');
+			const forgotSuccess = document.getElementById('forgot-success');
+			const resetError = document.getElementById('reset-error');
+			const resetSuccess = document.getElementById('reset-success');
+
+			// 修改密码相关元素
+			const changePasswordModal = document.getElementById('change-password-modal');
+			const closeChangePassword = document.getElementById('close-change-password');
+			const btnConfirmChangePassword = document.getElementById('btn-confirm-change-password');
+			const changePasswordError = document.getElementById('change-password-error');
+			const changePasswordSuccess = document.getElementById('change-password-success');
+
+			// 原有的全局变量
+			let items = [];
+			let editIndex = -1;
+			let currentFilter = 'all';
+			let currentReimbursedFilter = 'all';
+			let currentInvoiceFilter = 'all';
+
+			// DOM元素
+			const dateInput = document.getElementById('date');
+			const itemNameInput = document.getElementById('item-name');
+			const supplierInput = document.getElementById('supplier');
+			const amountInput = document.getElementById('amount');
+			const reimbursedSelect = document.getElementById('reimbursed');
+			const addButton = document.getElementById('add-item');
+			const itemsTable = document.getElementById('items-table');
+			const remainingAmount = document.getElementById('remaining-amount');
+			const remainingCount = document.getElementById('remaining-count');
+			const monthlyTotalAmount = document.getElementById('monthly-total-amount');
+			const monthFilter = document.getElementById('month-filter');
+			const reimbursedFilter = document.getElementById('reimbursed-filter');
+			const invoiceFilter = document.getElementById('invoice-filter');
+
+			// 月度统计相关元素
+			const monthlyModal = document.getElementById('monthly-modal');
+			const btnMonthly = document.getElementById('btn-monthly');
+			const closeMonthly = document.getElementById('close-monthly');
+			const totalAmount = document.getElementById('total-amount');
+			const totalCount = document.getElementById('total-count');
+			const totalUnreimbursed = document.getElementById('total-unreimbursed');
+			const monthlyTable = document.getElementById('monthly-table');
+
+			// 导入导出相关元素
+			const importModal = document.getElementById('import-modal');
+			const btnImport = document.getElementById('btn-import');
+			const btnExport = document.getElementById('btn-export');
+			const btnDeleteAll = document.getElementById('btn-delete-all');
+			const closeImport = document.getElementById('close-import');
+			const fileInput = document.getElementById('file-input');
+			const selectFileBtn = document.getElementById('select-file');
+			const fileInfo = document.getElementById('file-info');
+			const confirmImportBtn = document.getElementById('confirm-import');
+
+			// 设置默认日期为今天
+			const today = new Date().toISOString().split('T')[0];
+			dateInput.value = today;
+
+			// 切换登录/注册表单
+			showRegister.addEventListener('click', () => {
+				loginForm.style.display = 'none';
+				registerForm.style.display = 'block';
+				forgotPasswordForm.style.display = 'none';
+				resetPasswordForm.style.display = 'none';
+				clearErrors();
 			});
 
-			// 退出登录
-			document.getElementById('btn-menu-logout').addEventListener('click', () => {
-				logout(false);
+			showLogin.addEventListener('click', () => {
+				registerForm.style.display = 'none';
+				loginForm.style.display = 'block';
+				forgotPasswordForm.style.display = 'none';
+				resetPasswordForm.style.display = 'none';
+				clearErrors();
 			});
 
-			// 用户头像点击事件
-			document.getElementById('user-avatar').addEventListener('click', () => {
-				const menu = document.getElementById('user-menu');
-				menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+			showLoginFromForgot.addEventListener('click', () => {
+				forgotPasswordForm.style.display = 'none';
+				loginForm.style.display = 'block';
+				clearErrors();
 			});
 
-			// 修改密码功能
-			document.getElementById('btn-change-password').addEventListener('click', () => {
-				document.getElementById('user-menu').style.display = 'none';
-				document.getElementById('change-password-modal').style.display = 'flex';
+			showLoginFromReset.addEventListener('click', () => {
+				resetPasswordForm.style.display = 'none';
+				loginForm.style.display = 'block';
+				clearErrors();
 			});
 
-			document.getElementById('btn-confirm-change-password').addEventListener('click', async () => {
-				const currentPassword = document.getElementById('current-password').value;
-				const newPassword = document.getElementById('new-password').value;
-				const confirmPassword = document.getElementById('confirm-new-password').value;
-				const errorDiv = document.getElementById('change-password-error');
-				const successDiv = document.getElementById('change-password-success');
+			// 忘记密码按钮
+			btnForgotPassword.addEventListener('click', () => {
+				loginForm.style.display = 'none';
+				registerForm.style.display = 'none';
+				forgotPasswordForm.style.display = 'block';
+				resetPasswordForm.style.display = 'none';
+				clearErrors();
+			});
 
-				if (!currentPassword || !newPassword || !confirmPassword) {
-					errorDiv.textContent = '请填写所有字段';
-					return;
-				}
+			// 用户菜单显示/隐藏
+			userAvatar.addEventListener('click', (e) => {
+				e.stopPropagation();
+				userMenu.style.display = userMenu.style.display === 'block' ? 'none' : 'block';
+			});
 
-				if (newPassword.length < 6) {
-					errorDiv.textContent = '新密码长度至少为6位';
-					return;
-				}
+			// 点击其他地方隐藏用户菜单
+			document.addEventListener('click', () => {
+				userMenu.style.display = 'none';
+			});
 
-				if (newPassword !== confirmPassword) {
-					errorDiv.textContent = '两次输入的新密码不一致';
+			// 修改密码菜单项
+			btnChangePassword.addEventListener('click', () => {
+				userMenu.style.display = 'none';
+				changePasswordModal.style.display = 'flex';
+				clearChangePasswordForm();
+			});
+
+			// 菜单退出登录
+			btnMenuLogout.addEventListener('click', async () => {
+				await logoutImmediately();
+			});
+
+			// 关闭修改密码弹窗
+			closeChangePassword.addEventListener('click', () => {
+				changePasswordModal.style.display = 'none';
+			});
+
+			// 清除错误信息
+			function clearErrors() {
+				loginError.textContent = '';
+				registerError.textContent = '';
+				registerSuccess.textContent = '';
+				forgotError.textContent = '';
+				forgotSuccess.textContent = '';
+				resetError.textContent = '';
+				resetSuccess.textContent = '';
+			}
+
+			// 清除修改密码表单
+			function clearChangePasswordForm() {
+				document.getElementById('current-password').value = '';
+				document.getElementById('new-password').value = '';
+				document.getElementById('confirm-new-password').value = '';
+				changePasswordError.textContent = '';
+				changePasswordSuccess.textContent = '';
+			}
+
+			// 发送密码重置邮件
+			btnSendReset.addEventListener('click', async () => {
+				const email = document.getElementById('forgot-email').value;
+
+				if (!email) {
+					forgotError.textContent = '请输入邮箱地址';
 					return;
 				}
 
 				try {
-					// 验证当前密码
 					const {
-						data: {
-							user
-						}
-					} = await supabase.auth.getUser();
-					const {
-						error: signInError
-					} = await supabase.auth.signInWithPassword({
-						email: user.email,
-						password: currentPassword
+						error
+					} = await supabase.auth.resetPasswordForEmail(email, {
+						redirectTo: 'https://procurement-system-git-main-jhs-projects-60ae9a98.vercel.app',
 					});
 
-					if (signInError) {
-						errorDiv.textContent = '当前密码不正确';
-						return;
-					}
+					if (error) throw error;
 
-					// 更新密码
+					forgotSuccess.textContent = '重置密码邮件已发送，请检查您的邮箱。';
+					forgotError.textContent = '';
+				} catch (error) {
+					forgotError.textContent = '发送失败: ' + error.message;
+					forgotSuccess.textContent = '';
+				}
+			});
+
+			// 重置密码
+			btnResetPassword.addEventListener('click', async () => {
+				const newPassword = document.getElementById('reset-password').value;
+				const confirmPassword = document.getElementById('reset-confirm-password').value;
+
+				if (!newPassword || !confirmPassword) {
+					resetError.textContent = '请填写所有字段';
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					resetError.textContent = '密码至少需要6位';
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					resetError.textContent = '两次输入的密码不一致';
+					return;
+				}
+
+				try {
 					const {
 						error
 					} = await supabase.auth.updateUser({
@@ -1525,745 +1427,982 @@
 
 					if (error) throw error;
 
-					errorDiv.textContent = '';
-					successDiv.textContent = '密码修改成功！';
+					resetSuccess.textContent = '密码重置成功！';
+					resetError.textContent = '';
 
-					// 3秒后关闭弹窗
+					// 3秒后跳转到登录页面
 					setTimeout(() => {
-						document.getElementById('change-password-modal').style.display = 'none';
-						successDiv.textContent = '';
-						// 清空表单
-						document.getElementById('current-password').value = '';
-						document.getElementById('new-password').value = '';
-						document.getElementById('confirm-new-password').value = '';
-					}, 3000);
+						resetPasswordForm.style.display = 'none';
+						loginForm.style.display = 'block';
+						clearErrors();
+					}, 2000);
 				} catch (error) {
-					errorDiv.textContent = '密码修改失败: ' + error.message;
+					resetError.textContent = '重置失败: ' + error.message;
+					resetSuccess.textContent = '';
 				}
 			});
 
-			// 关闭弹窗
-			document.getElementById('close-change-password').addEventListener('click', () => {
-				document.getElementById('change-password-modal').style.display = 'none';
+			// 修改密码
+			btnConfirmChangePassword.addEventListener('click', async () => {
+				const currentPassword = document.getElementById('current-password').value;
+				const newPassword = document.getElementById('new-password').value;
+				const confirmPassword = document.getElementById('confirm-new-password').value;
+
+				if (!currentPassword || !newPassword || !confirmPassword) {
+					changePasswordError.textContent = '请填写所有字段';
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					changePasswordError.textContent = '新密码至少需要6位';
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					changePasswordError.textContent = '两次输入的新密码不一致';
+					return;
+				}
+
+				try {
+					// 1. 获取当前用户信息
+					const {
+						data: {
+							user
+						},
+						error: userError
+					} = await supabase.auth.getUser();
+					if (!user || userError) {
+						throw new Error('用户未登录或登录已过期');
+					}
+
+					// 2. 验证当前密码是否正确 - 关键修复！
+					const {
+						error: signInError
+					} = await supabase.auth.signInWithPassword({
+						email: user.email,
+						password: currentPassword
+					});
+
+					if (signInError) {
+						throw new Error('当前密码错误，请重新输入');
+					}
+
+					// 3. 当前密码验证通过，更新密码
+					const {
+						error: updateError
+					} = await supabase.auth.updateUser({
+						password: newPassword
+					});
+
+					if (updateError) throw updateError;
+
+					changePasswordSuccess.textContent = '密码修改成功！';
+					changePasswordError.textContent = '';
+
+					// 3秒后关闭弹窗
+					setTimeout(() => {
+						changePasswordModal.style.display = 'none';
+						clearChangePasswordForm();
+					}, 2000);
+
+				} catch (error) {
+					console.error('修改密码错误:', error);
+					changePasswordError.textContent = '修改失败: ' + error.message;
+					changePasswordSuccess.textContent = '';
+				}
 			});
 
-			// Enter键登录/注册
-			document.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') {
-					if (document.getElementById('login-form').style.display !== 'none') {
-						document.getElementById('btn-login').click();
-					} else if (document.getElementById('register-form').style.display !== 'none') {
-						document.getElementById('btn-register').click();
-					} else if (document.getElementById('forgot-password-form').style.display !== 'none') {
-						document.getElementById('btn-send-reset').click();
-					} else if (document.getElementById('reset-password-form').style.display !== 'none') {
-						document.getElementById('btn-reset-password').click();
+			// 用户注册 - 简化版本
+			btnRegister.addEventListener('click', async () => {
+				const email = document.getElementById('register-email').value;
+				const password = document.getElementById('register-password').value;
+
+				if (!email || !password) {
+					registerError.textContent = '请填写邮箱和密码';
+					return;
+				}
+
+				if (password.length < 6) {
+					registerError.textContent = '密码至少需要6位';
+					return;
+				}
+
+				try {
+					// 简化注册，不使用任何额外数据
+					const {
+						data,
+						error
+					} = await supabase.auth.signUp({
+						email,
+						password
+					});
+
+					if (error) {
+						// 检查是否是邮箱验证相关的错误
+						if (error.message.includes('email confirmation') || error.message.includes('confirm')) {
+							registerSuccess.textContent = '注册成功！请检查您的邮箱验证邮件。';
+							registerError.textContent = '';
+							// 3秒后切换到登录表单
+							setTimeout(() => {
+								showLogin.click();
+							}, 2000);
+						} else {
+							throw error;
+						}
+					} else if (data.user) {
+						registerSuccess.textContent = '注册成功！您现在可以登录了。';
+						registerError.textContent = '';
+						// 3秒后切换到登录表单
+						setTimeout(() => {
+							showLogin.click();
+						}, 2000);
+					}
+				} catch (error) {
+					console.error('注册错误:', error);
+					// 提供更友好的错误信息
+					if (error.message.includes('Database error saving new user')) {
+						registerError.textContent = '注册失败：数据库配置问题。请检查Supabase项目设置。';
+					} else if (error.message.includes('User already registered')) {
+						registerError.textContent = '该邮箱已被注册，请使用其他邮箱或直接登录。';
+					} else {
+						registerError.textContent = '注册失败: ' + error.message;
 					}
 				}
 			});
 
-			// 用户活动监听
-			document.addEventListener('mousemove', resetActivityTimer);
-			document.addEventListener('keydown', resetActivityTimer);
-			document.addEventListener('click', resetActivityTimer);
+			// 用户登录
+			btnLogin.addEventListener('click', async () => {
+				const email = document.getElementById('login-email').value;
+				const password = document.getElementById('login-password').value;
 
-			// === 应用功能代码（保持不变）===
-			let items = [];
-			let editingId = null;
-
-			// 页面加载时初始化
-			document.addEventListener('DOMContentLoaded', async () => {
-				// 加载记住密码状态
-				loadRememberedAccounts();
-
-				// 检查登录状态
-				const isLoggedIn = await checkAuthStatus();
-
-				// 只有在用户登录后才初始化应用功能
-				if (isLoggedIn) {
-					// 初始化日期为今天
-					document.getElementById('date').valueAsDate = new Date();
-
-					// 初始化月份筛选器
-					initializeMonthFilter();
-
-					// 加载数据
-					loadItems();
-
-					// 添加事件监听器
-					document.getElementById('add-item').addEventListener('click', addItem);
-					document.getElementById('month-filter').addEventListener('change', filterItems);
-					document.getElementById('reimbursed-filter').addEventListener('change', filterItems);
-					document.getElementById('invoice-filter').addEventListener('change', filterItems);
-					document.getElementById('btn-monthly').addEventListener('click', showMonthlyStats);
-					document.getElementById('close-monthly').addEventListener('click', () => {
-						document.getElementById('monthly-modal').style.display = 'none';
-					});
-					document.getElementById('btn-import').addEventListener('click', () => {
-						document.getElementById('import-modal').style.display = 'flex';
-					});
-					document.getElementById('close-import').addEventListener('click', () => {
-						document.getElementById('import-modal').style.display = 'none';
-					});
-					document.getElementById('select-file').addEventListener('click', () => {
-						document.getElementById('file-input').click();
-					});
-					document.getElementById('file-input').addEventListener('change', handleFileSelect);
-					document.getElementById('confirm-import').addEventListener('click', importData);
-					document.getElementById('btn-export').addEventListener('click', exportData);
-					document.getElementById('btn-delete-all').addEventListener('click', deleteFilteredItems);
-				}
-			});
-
-			// 初始化月份筛选器
-			function initializeMonthFilter() {
-				const monthFilter = document.getElementById('month-filter');
-				const currentYear = new Date().getFullYear();
-
-				// 添加最近12个月
-				for (let i = 0; i < 12; i++) {
-					const date = new Date(currentYear, new Date().getMonth() - i, 1);
-					const year = date.getFullYear();
-					const month = date.getMonth() + 1;
-					const monthStr = month < 10 ? `0${month}` : month;
-					const value = `${year}-${monthStr}`;
-					const text = `${year}年${month}月`;
-
-					const option = document.createElement('option');
-					option.value = value;
-					option.textContent = text;
-					monthFilter.appendChild(option);
-				}
-			}
-
-			// 添加采购物品
-			async function addItem() {
-				const date = document.getElementById('date').value;
-				const itemName = document.getElementById('item-name').value;
-				const supplier = document.getElementById('supplier').value;
-				const amount = parseFloat(document.getElementById('amount').value);
-				const reimbursed = document.getElementById('reimbursed').value;
-
-				if (!date || !itemName || !supplier || isNaN(amount)) {
-					alert('请填写所有字段');
+				if (!email || !password) {
+					loginError.textContent = '请填写邮箱和密码';
 					return;
 				}
 
+				try {
+					const {
+						data,
+						error
+					} = await supabase.auth.signInWithPassword({
+						email,
+						password
+					});
+
+					if (error) throw error;
+
+					if (data.user) {
+						await loadUserProfile(data.user);
+						showApp();
+					}
+				} catch (error) {
+					if (error.message.includes('Invalid login credentials')) {
+						loginError.textContent = '邮箱或密码错误，请重试。';
+					} else {
+						loginError.textContent = error.message;
+					}
+				}
+			});
+
+			// 显示主应用
+			function showApp() {
+				loginPage.style.display = 'none';
+				appContainer.style.display = 'block';
+				loadUserData();
+			}
+
+			// 显示登录页面
+			function showLoginPage() {
+				loginPage.style.display = 'flex';
+				appContainer.style.display = 'none';
+				items = [];
+				renderTable();
+				updateStats();
+			}
+
+			// 加载用户配置
+			async function loadUserProfile(user) {
+				const displayName = user.email?.split('@')[0] || '用户';
+				userName.textContent = displayName;
+				userAvatar.textContent = displayName.charAt(0).toUpperCase();
+			}
+
+			// 加载用户数据
+			async function loadUserData() {
 				const {
 					data: {
 						user
 					}
 				} = await supabase.auth.getUser();
+				if (user) {
+					try {
+						const {
+							data,
+							error
+						} = await supabase
+							.from('procurement_items')
+							.select('*')
+							.eq('user_id', user.id)
+							.order('date', {
+								ascending: false
+							});
 
-				const newItem = {
-					date,
-					item_name: itemName,
-					supplier,
-					amount,
-					reimbursed,
-					invoice_received: false,
-					user_id: user.id
-				};
-
-				try {
-					const {
-						data,
-						error
-					} = await supabase
-						.from('procurement_items')
-						.insert([newItem])
-						.select();
-
-					if (error) throw error;
-
-					// 清空表单
-					document.getElementById('item-name').value = '';
-					document.getElementById('supplier').value = '';
-					document.getElementById('amount').value = '';
-
-					// 重新加载数据
-					loadItems();
-				} catch (error) {
-					console.error('添加物品失败:', error);
-					alert('添加物品失败: ' + error.message);
-				}
-			}
-
-			// 加载采购物品
-			async function loadItems() {
-				try {
-					const {
-						data: {
-							user
+						if (error) {
+							console.error('加载数据失败:', error);
+							items = [];
+						} else {
+							// 转换数据格式以兼容原有代码
+							items = data.map(item => ({
+								date: item.date,
+								name: item.name,
+								supplier: item.supplier,
+								amount: item.amount.toString(),
+								reimbursed: item.reimbursed,
+								invoiceReceived: item.invoice_received
+							}));
 						}
-					} = await supabase.auth.getUser();
 
-					// 检查用户是否已登录
-					if (!user) {
-						console.log('用户未登录，跳过加载物品');
-						items = [];
-						displayItems(items);
+						updateMonthFilterOptions();
+						renderTable();
 						updateStats();
-						return;
-					}
-
-					const {
-						data,
-						error
-					} = await supabase
-						.from('procurement_items')
-						.select('*')
-						.eq('user_id', user.id)
-						.order('date', {
-							ascending: false
-						});
-
-					if (error) throw error;
-
-					items = data || [];
-					displayItems(items);
-					updateStats();
-				} catch (error) {
-					console.error('加载物品失败:', error);
-					// 只在用户已登录时显示错误提示
-					const {
-						data: {
-							user
-						}
-					} = await supabase.auth.getUser();
-					if (user) {
-						alert('加载物品失败: ' + error.message);
+					} catch (error) {
+						console.error('加载数据时发生错误:', error);
+						items = [];
+						updateMonthFilterOptions();
+						renderTable();
+						updateStats();
 					}
 				}
 			}
 
-			// 显示采购物品
-			function displayItems(itemsToDisplay) {
-				const tableBody = document.getElementById('items-table');
-				tableBody.innerHTML = '';
-
-				itemsToDisplay.forEach((item, index) => {
-					const row = document.createElement('tr');
-
-					// 格式化日期
-					const dateObj = new Date(item.date);
-					const formattedDate =
-						`${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
-
-					// 格式化金额
-					const formattedAmount = `¥${item.amount.toFixed(2)}`;
-
-					row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${formattedDate}</td>
-                    <td>${item.item_name}</td>
-                    <td>${item.supplier}</td>
-                    <td>${formattedAmount}</td>
-                    <td class="${item.reimbursed === '已报销' ? 'status-reimbursed' : 'status-unreimbursed'}">${item.reimbursed}</td>
-                    <td class="${item.invoice_received ? 'invoice-received' : 'invoice-pending'}">
-                        <input type="checkbox" class="invoice-checkbox" ${item.invoice_received ? 'checked' : ''} data-id="${item.id}">
-                        ${item.invoice_received ? '已获得' : '未获得'}
-                    </td>
-                    <td class="actions">
-                        <button class="btn-edit" data-id="${item.id}">编辑</button>
-                        <button class="btn-delete" data-id="${item.id}">删除</button>
-                        ${item.reimbursed === '未报销' ? `<button class="btn-reimburse" data-id="${item.id}">标记报销</button>` : ''}
-                    </td>
-                `;
-
-					tableBody.appendChild(row);
-				});
-
-				// 添加事件监听器
-				document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
-					checkbox.addEventListener('change', toggleInvoiceStatus);
-				});
-
-				document.querySelectorAll('.btn-edit').forEach(button => {
-					button.addEventListener('click', editItem);
-				});
-
-				document.querySelectorAll('.btn-delete').forEach(button => {
-					button.addEventListener('click', deleteItem);
-				});
-
-				document.querySelectorAll('.btn-reimburse').forEach(button => {
-					button.addEventListener('click', markAsReimbursed);
-				});
-			}
-
-			// 切换发票状态
-			async function toggleInvoiceStatus(event) {
-				const itemId = event.target.dataset.id;
-				const invoiceReceived = event.target.checked;
-
-				try {
-					const {
-						error
-					} = await supabase
-						.from('procurement_items')
-						.update({
-							invoice_received: invoiceReceived
-						})
-						.eq('id', itemId);
-
-					if (error) throw error;
-
-					// 更新本地数据
-					const itemIndex = items.findIndex(item => item.id == itemId);
-					if (itemIndex !== -1) {
-						items[itemIndex].invoice_received = invoiceReceived;
+			// 保存数据到Supabase
+			async function saveItems() {
+				const {
+					data: {
+						user
 					}
-
-					// 更新显示
-					displayItems(items);
-					updateStats();
-				} catch (error) {
-					console.error('更新发票状态失败:', error);
-					alert('更新发票状态失败: ' + error.message);
-					// 恢复复选框状态
-					event.target.checked = !invoiceReceived;
-				}
-			}
-
-			// 编辑物品
-			function editItem(event) {
-				const itemId = event.target.dataset.id;
-				const item = items.find(item => item.id == itemId);
-
-				if (item) {
-					// 填充表单
-					document.getElementById('date').value = item.date;
-					document.getElementById('item-name').value = item.item_name;
-					document.getElementById('supplier').value = item.supplier;
-					document.getElementById('amount').value = item.amount;
-					document.getElementById('reimbursed').value = item.reimbursed;
-
-					// 更改按钮文本和功能
-					const addButton = document.getElementById('add-item');
-					addButton.textContent = '更新物品';
-					addButton.onclick = () => updateItem(itemId);
-
-					editingId = itemId;
-				}
-			}
-
-			// 更新物品
-			async function updateItem(itemId) {
-				const date = document.getElementById('date').value;
-				const itemName = document.getElementById('item-name').value;
-				const supplier = document.getElementById('supplier').value;
-				const amount = parseFloat(document.getElementById('amount').value);
-				const reimbursed = document.getElementById('reimbursed').value;
-
-				if (!date || !itemName || !supplier || isNaN(amount)) {
-					alert('请填写所有字段');
-					return;
-				}
+				} = await supabase.auth.getUser();
+				if (!user) return;
 
 				try {
+					// 删除用户的所有现有数据
 					const {
-						error
-					} = await supabase
-						.from('procurement_items')
-						.update({
-							date,
-							item_name: itemName,
-							supplier,
-							amount,
-							reimbursed
-						})
-						.eq('id', itemId);
-
-					if (error) throw error;
-
-					// 重置表单和按钮
-					document.getElementById('date').valueAsDate = new Date();
-					document.getElementById('item-name').value = '';
-					document.getElementById('supplier').value = '';
-					document.getElementById('amount').value = '';
-					document.getElementById('reimbursed').value = '未报销';
-
-					const addButton = document.getElementById('add-item');
-					addButton.textContent = '添加物品';
-					addButton.onclick = addItem;
-
-					editingId = null;
-
-					// 重新加载数据
-					loadItems();
-				} catch (error) {
-					console.error('更新物品失败:', error);
-					alert('更新物品失败: ' + error.message);
-				}
-			}
-
-			// 删除物品
-			async function deleteItem(event) {
-				const itemId = event.target.dataset.id;
-
-				if (!confirm('确定要删除这个物品吗？')) {
-					return;
-				}
-
-				try {
-					const {
-						error
+						error: deleteError
 					} = await supabase
 						.from('procurement_items')
 						.delete()
-						.eq('id', itemId);
+						.eq('user_id', user.id);
 
-					if (error) throw error;
-
-					// 重新加载数据
-					loadItems();
-				} catch (error) {
-					console.error('删除物品失败:', error);
-					alert('删除物品失败: ' + error.message);
-				}
-			}
-
-			// 标记为已报销
-			async function markAsReimbursed(event) {
-				const itemId = event.target.dataset.id;
-
-				try {
-					const {
-						error
-					} = await supabase
-						.from('procurement_items')
-						.update({
-							reimbursed: '已报销'
-						})
-						.eq('id', itemId);
-
-					if (error) throw error;
-
-					// 重新加载数据
-					loadItems();
-				} catch (error) {
-					console.error('标记报销失败:', error);
-					alert('标记报销失败: ' + error.message);
-				}
-			}
-
-			// 筛选物品
-			function filterItems() {
-				const monthFilter = document.getElementById('month-filter').value;
-				const reimbursedFilter = document.getElementById('reimbursed-filter').value;
-				const invoiceFilter = document.getElementById('invoice-filter').value;
-
-				let filteredItems = items;
-
-				// 按月筛选
-				if (monthFilter !== 'all') {
-					filteredItems = filteredItems.filter(item => {
-						const itemMonth = item.date.substring(0, 7); // YYYY-MM
-						return itemMonth === monthFilter;
-					});
-				}
-
-				// 按报销状态筛选
-				if (reimbursedFilter !== 'all') {
-					filteredItems = filteredItems.filter(item => item.reimbursed === reimbursedFilter);
-				}
-
-				// 按发票状态筛选
-				if (invoiceFilter !== 'all') {
-					const invoiceReceived = invoiceFilter === 'received';
-					filteredItems = filteredItems.filter(item => item.invoice_received === invoiceReceived);
-				}
-
-				displayItems(filteredItems);
-			}
-
-			// 更新统计信息
-			function updateStats() {
-				// 剩余未报销金额和数量
-				const unreimbursedItems = items.filter(item => item.reimbursed === '未报销');
-				const remainingAmount = unreimbursedItems.reduce((sum, item) => sum + item.amount, 0);
-				const remainingCount = unreimbursedItems.length;
-
-				// 月度总采购金额
-				const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
-				const monthlyItems = items.filter(item => item.date.substring(0, 7) === currentMonth);
-				const monthlyTotalAmount = monthlyItems.reduce((sum, item) => sum + item.amount, 0);
-
-				document.getElementById('remaining-amount').textContent = `¥${remainingAmount.toFixed(2)}`;
-				document.getElementById('remaining-count').textContent = remainingCount;
-				document.getElementById('monthly-total-amount').textContent = `¥${monthlyTotalAmount.toFixed(2)}`;
-			}
-
-			// 显示月度统计
-			function showMonthlyStats() {
-				// 计算月度统计数据
-				const monthlyData = {};
-
-				items.forEach(item => {
-					const month = item.date.substring(0, 7); // YYYY-MM
-
-					if (!monthlyData[month]) {
-						monthlyData[month] = {
-							amount: 0,
-							count: 0,
-							unreimbursed: 0
-						};
+					if (deleteError) {
+						console.error('删除旧数据失败:', deleteError);
 					}
 
-					monthlyData[month].amount += item.amount;
-					monthlyData[month].count += 1;
+					// 插入新数据
+					if (items.length > 0) {
+						const itemsToInsert = items.map(item => ({
+							user_id: user.id,
+							date: item.date,
+							name: item.name,
+							supplier: item.supplier,
+							amount: parseFloat(item.amount),
+							reimbursed: item.reimbursed,
+							invoice_received: item.invoiceReceived
+						}));
 
-					if (item.reimbursed === '未报销') {
-						monthlyData[month].unreimbursed += item.amount;
+						const {
+							error: insertError
+						} = await supabase
+							.from('procurement_items')
+							.insert(itemsToInsert);
+
+						if (insertError) {
+							console.error('保存数据失败:', insertError);
+							throw insertError;
+						}
 					}
-				});
-
-				// 计算总计
-				const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-				const totalCount = items.length;
-				const totalUnreimbursed = items
-					.filter(item => item.reimbursed === '未报销')
-					.reduce((sum, item) => sum + item.amount, 0);
-
-				// 更新总计显示
-				document.getElementById('total-amount').textContent = `¥${totalAmount.toFixed(2)}`;
-				document.getElementById('total-count').textContent = totalCount;
-				document.getElementById('total-unreimbursed').textContent = `¥${totalUnreimbursed.toFixed(2)}`;
-
-				// 更新月度表格
-				const monthlyTable = document.getElementById('monthly-table');
-				monthlyTable.innerHTML = '';
-
-				// 按月份排序（从新到旧）
-				const sortedMonths = Object.keys(monthlyData).sort().reverse();
-
-				sortedMonths.forEach(month => {
-					const data = monthlyData[month];
-					const row = document.createElement('tr');
-
-					// 格式化月份显示
-					const [year, monthNum] = month.split('-');
-					const monthDisplay = `${year}年${parseInt(monthNum)}月`;
-
-					row.innerHTML = `
-                    <td>${monthDisplay}</td>
-                    <td>¥${data.amount.toFixed(2)}</td>
-                    <td>${data.count}</td>
-                    <td>¥${data.unreimbursed.toFixed(2)}</td>
-                `;
-
-					monthlyTable.appendChild(row);
-				});
-
-				// 显示弹窗
-				document.getElementById('monthly-modal').style.display = 'flex';
+				} catch (error) {
+					console.error('保存数据时发生错误:', error);
+					throw error;
+				}
 			}
 
-			// 文件选择处理
-			function handleFileSelect(event) {
-				const file = event.target.files[0];
-				const fileInfo = document.getElementById('file-info');
-				const confirmButton = document.getElementById('confirm-import');
+			// 修改原有的数据保存函数
+			function updateLocalStorage() {
+				saveItems().catch(error => {
+					console.error('保存到数据库失败:', error);
+					alert('保存数据失败，请检查网络连接或刷新页面重试。');
+				});
+			}
 
-				if (file) {
-					fileInfo.textContent = `已选择: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-					confirmButton.style.display = 'block';
+			// 初始化应用
+			async function init() {
+
+				// 先检查是否是密码重置流程
+				const isPasswordReset = await handlePasswordReset();
+				if (isPasswordReset) return;
+
+				// 检查当前登录状态
+				const {
+					data: {
+						session
+					}
+				} = await supabase.auth.getSession();
+
+				if (session?.user) {
+					await loadUserProfile(session.user);
+					showApp();
+					setupInactivityDetection(); // 启动不活动检测
 				} else {
-					fileInfo.textContent = '未选择文件';
-					confirmButton.style.display = 'none';
+					showLoginPage();
 				}
+
+				// 原有的初始化代码
+				updateMonthFilterOptions();
+				renderTable();
+				updateStats();
+
+				// 设置事件监听器
+				monthFilter.addEventListener('change', function() {
+					currentFilter = this.value;
+					renderTable();
+					updateStats();
+				});
+
+				reimbursedFilter.addEventListener('change', function() {
+					currentReimbursedFilter = this.value;
+					renderTable();
+					updateStats();
+				});
+
+				invoiceFilter.addEventListener('change', function() {
+					currentInvoiceFilter = this.value;
+					renderTable();
+					updateStats();
+				});
+
+				setupImportExportEvents();
+
+				// 检查URL中是否有重置密码的token
+				checkResetPasswordToken();
+			}
+
+			// 检查重置密码token
+			async function checkResetPasswordToken() {
+				const urlParams = new URLSearchParams(window.location.hash.substring(1));
+				const type = urlParams.get('type');
+				const accessToken = urlParams.get('access_token');
+
+				if (type === 'recovery' && accessToken) {
+					// 显示重置密码表单
+					loginForm.style.display = 'none';
+					registerForm.style.display = 'none';
+					forgotPasswordForm.style.display = 'none';
+					resetPasswordForm.style.display = 'block';
+
+					// 清除URL中的token参数
+					window.history.replaceState({}, document.title, window.location.pathname);
+				}
+			}
+
+			// 监听认证状态变化
+			supabase.auth.onAuthStateChange(async (event, session) => {
+				if (event === 'SIGNED_IN' && session?.user) {
+					await loadUserProfile(session.user);
+					showApp();
+					setupInactivityDetection(); // 登录后启动不活动检测
+				} else if (event === 'SIGNED_OUT') {
+					if (inactivityTimer) {
+						clearInterval(inactivityTimer);
+						inactivityTimer = null;
+					}
+					showLoginPage();
+				} else if (event === 'PASSWORD_RECOVERY') {
+					// 显示重置密码表单
+					loginForm.style.display = 'none';
+					registerForm.style.display = 'none';
+					forgotPasswordForm.style.display = 'none';
+					resetPasswordForm.style.display = 'block';
+				}
+			});
+
+			// 设置导入导出事件监听
+			function setupImportExportEvents() {
+				// 导入按钮点击
+				btnImport.addEventListener('click', function() {
+					resetImportForm();
+					importModal.style.display = 'flex';
+				});
+
+				// 导出按钮点击
+				btnExport.addEventListener('click', function() {
+					exportData();
+				});
+
+				// 删除筛选数据按钮点击
+				btnDeleteAll.addEventListener('click', function() {
+					deleteFilteredData();
+				});
+
+				// 关闭导入弹窗
+				closeImport.addEventListener('click', function() {
+					importModal.style.display = 'none';
+				});
+
+				// 选择文件按钮
+				selectFileBtn.addEventListener('click', function() {
+					fileInput.click();
+				});
+
+				// 文件选择变化
+				fileInput.addEventListener('change', function(e) {
+					const file = e.target.files[0];
+					if (file) {
+						fileInfo.textContent = `已选择文件: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+						confirmImportBtn.style.display = 'block';
+					}
+				});
+
+				// 确认导入
+				confirmImportBtn.addEventListener('click', function() {
+					importData();
+				});
+
+				// 跟踪鼠标状态
+				let mouseDownTarget = null;
+
+				// 记录鼠标按下的目标
+				document.addEventListener('mousedown', function(event) {
+					mouseDownTarget = event.target;
+				});
+
+				// 只在鼠标按下和释放的目标相同时关闭弹窗
+				document.addEventListener('mouseup', function(event) {
+					// 检查鼠标按下和释放是否在同一个元素上
+					if (mouseDownTarget === event.target) {
+						const isImportModalBg = event.target === importModal;
+						const isMonthlyModalBg = event.target === monthlyModal;
+						const isChangePasswordModalBg = event.target === changePasswordModal;
+
+						if (isChangePasswordModalBg) {
+							const hasMessages = changePasswordError.textContent || changePasswordSuccess.textContent;
+							if (!hasMessages) {
+								changePasswordModal.style.display = 'none';
+								clearChangePasswordForm();
+							}
+						} else if (isImportModalBg) {
+							importModal.style.display = 'none';
+						} else if (isMonthlyModalBg) {
+							monthlyModal.style.display = 'none';
+						}
+					}
+
+					mouseDownTarget = null;
+				});
+
+				// 阻止弹窗内容区域的事件
+				document.querySelectorAll('.modal-content').forEach(content => {
+					content.addEventListener('mousedown', function(event) {
+						event.stopPropagation();
+					});
+					content.addEventListener('mouseup', function(event) {
+						event.stopPropagation();
+					});
+				});
+
+				// 月度统计弹窗
+				btnMonthly.addEventListener('click', function() {
+					updateMonthlyStats();
+					monthlyModal.style.display = 'flex';
+				});
+
+				closeMonthly.addEventListener('click', function() {
+					monthlyModal.style.display = 'none';
+				});
 			}
 
 			// 导入数据
-			async function importData() {
-				const fileInput = document.getElementById('file-input');
+			function importData() {
 				const file = fileInput.files[0];
-
 				if (!file) {
-					alert('请先选择文件');
+					alert('请先选择文件！');
 					return;
 				}
 
 				const reader = new FileReader();
-
-				reader.onload = async function(e) {
+				reader.onload = function(e) {
 					try {
 						const importedData = JSON.parse(e.target.result);
 
 						// 验证数据格式
 						if (!Array.isArray(importedData)) {
-							throw new Error('数据格式不正确，应为数组');
+							throw new Error('数据格式不正确：应为数组格式');
 						}
 
-						// 获取当前用户ID
-						const {
-							data: {
-								user
-							}
-						} = await supabase.auth.getUser();
+						// 验证每个项目的结构
+						const isValid = importedData.every(item =>
+							item &&
+							typeof item.date === 'string' &&
+							typeof item.name === 'string' &&
+							typeof item.supplier === 'string' &&
+							typeof item.amount === 'string' &&
+							typeof item.reimbursed === 'string'
+						);
 
-						// 为导入的数据添加用户ID
-						const dataWithUserId = importedData.map(item => ({
-							...item,
-							user_id: user.id
-						}));
+						if (!isValid) {
+							throw new Error('数据格式不正确：缺少必要字段');
+						}
 
-						// 删除现有数据
-						const {
-							error: deleteError
-						} = await supabase
-							.from('procurement_items')
-							.delete()
-							.eq('user_id', user.id);
+						if (confirm(`确定要导入 ${importedData.length} 条记录吗？这将覆盖现有数据。`)) {
+							// 确保导入的数据有invoiceReceived字段
+							const processedData = importedData.map(item => {
+								if (item.invoiceReceived === undefined) {
+									item.invoiceReceived = false;
+								}
+								return item;
+							});
 
-						if (deleteError) throw deleteError;
+							items = processedData;
+							updateLocalStorage();
 
-						// 插入新数据
-						const {
-							error: insertError
-						} = await supabase
-							.from('procurement_items')
-							.insert(dataWithUserId);
+							// 更新UI
+							updateMonthFilterOptions();
+							renderTable();
+							updateStats();
 
-						if (insertError) throw insertError;
-
-						alert('数据导入成功！');
-						document.getElementById('import-modal').style.display = 'none';
-						loadItems();
+							alert(`成功导入 ${importedData.length} 条记录！`);
+							importModal.style.display = 'none';
+							resetImportForm();
+						}
 					} catch (error) {
-						console.error('导入数据失败:', error);
-						alert('导入数据失败: ' + error.message);
+						alert('导入失败：' + error.message);
 					}
 				};
-
 				reader.readAsText(file);
 			}
 
 			// 导出数据
-			async function exportData() {
-				try {
-					const {
-						data: {
-							user
-						}
-					} = await supabase.auth.getUser();
-
-					const {
-						data,
-						error
-					} = await supabase
-						.from('procurement_items')
-						.select('*')
-						.eq('user_id', user.id);
-
-					if (error) throw error;
-
-					// 创建数据副本，移除用户ID
-					const exportData = data.map(item => {
-						const {
-							user_id,
-							...itemWithoutUserId
-						} = item;
-						return itemWithoutUserId;
-					});
-
-					const dataStr = JSON.stringify(exportData, null, 2);
-					const dataBlob = new Blob([dataStr], {
-						type: 'application/json'
-					});
-
-					const url = URL.createObjectURL(dataBlob);
-					const link = document.createElement('a');
-					link.href = url;
-					link.download = `采购数据_${new Date().toISOString().split('T')[0]}.json`;
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
-					URL.revokeObjectURL(url);
-				} catch (error) {
-					console.error('导出数据失败:', error);
-					alert('导出数据失败: ' + error.message);
+			function exportData() {
+				if (items.length === 0) {
+					alert('没有数据可以导出！');
+					return;
 				}
+
+				const dataStr = JSON.stringify(items, null, 2);
+				const dataBlob = new Blob([dataStr], {
+					type: 'application/json'
+				});
+
+				// 创建下载链接
+				const url = URL.createObjectURL(dataBlob);
+				const link = document.createElement('a');
+				link.href = url;
+
+				// 生成文件名（包含当前日期）
+				const now = new Date();
+				const dateStr = now.toISOString().split('T')[0];
+				link.download = `采购数据_${dateStr}.json`;
+
+				// 触发下载
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				URL.revokeObjectURL(url);
+
+				alert(`成功导出 ${items.length} 条记录！`);
 			}
 
 			// 删除筛选后的数据
-			async function deleteFilteredItems() {
-				const monthFilter = document.getElementById('month-filter').value;
-				const reimbursedFilter = document.getElementById('reimbursed-filter').value;
-				const invoiceFilter = document.getElementById('invoice-filter').value;
+			function deleteFilteredData() {
+				const filteredItems = getFilteredItems();
 
-				// 构建筛选条件
-				let conditions = [];
-
-				if (monthFilter !== 'all') {
-					conditions.push(`date.startsWith."${monthFilter}"`);
+				if (filteredItems.length === 0) {
+					alert('当前筛选条件下没有数据可以删除！');
+					return;
 				}
 
-				if (reimbursedFilter !== 'all') {
-					conditions.push(`reimbursed.eq."${reimbursedFilter}"`);
-				}
-
-				if (invoiceFilter !== 'all') {
-					const invoiceReceived = invoiceFilter === 'received';
-					conditions.push(`invoice_received.eq.${invoiceReceived}`);
-				}
-
-				if (conditions.length === 0) {
-					if (!confirm('确定要删除所有采购记录吗？此操作不可撤销！')) {
-						return;
-					}
+				let message = '';
+				if (currentFilter === 'all' && currentReimbursedFilter === 'all' && currentInvoiceFilter === 'all') {
+					message = `确定要删除所有 ${filteredItems.length} 条采购记录吗？此操作不可撤销！`;
 				} else {
-					const filterDesc = [
-						monthFilter !== 'all' ? `月份: ${monthFilter}` : '',
-						reimbursedFilter !== 'all' ? `报销状态: ${reimbursedFilter}` : '',
-						invoiceFilter !== 'all' ? `发票状态: ${invoiceFilter === 'received' ? '已获得' : '未获得'}` : ''
-					].filter(Boolean).join(', ');
-
-					if (!confirm(`确定要删除${filterDesc}的所有采购记录吗？此操作不可撤销！`)) {
-						return;
-					}
+					message = `确定要删除当前筛选条件下的 ${filteredItems.length} 条采购记录吗？此操作不可撤销！`;
 				}
 
-				try {
-					const {
-						data: {
-							user
+				if (confirm(message)) {
+					// 从原始数据中删除筛选出的项目
+					items = items.filter(item => {
+						// 检查月份筛选
+						if (currentFilter !== 'all') {
+							const itemDate = new Date(item.date);
+							const itemMonth =
+								`${itemDate.getFullYear()}-${(itemDate.getMonth() + 1).toString().padStart(2, '0')}`;
+							if (itemMonth !== currentFilter) {
+								return true;
+							}
 						}
-					} = await supabase.auth.getUser();
 
-					let query = supabase
-						.from('procurement_items')
-						.delete()
-						.eq('user_id', user.id);
+						// 检查报销状态筛选
+						if (currentReimbursedFilter !== 'all' && item.reimbursed !== currentReimbursedFilter) {
+							return true;
+						}
 
-					// 应用筛选条件
-					if (monthFilter !== 'all') {
-						query = query.like('date', `${monthFilter}%`);
-					}
+						// 检查发票状态筛选
+						if (currentInvoiceFilter !== 'all') {
+							const invoiceMatch = (currentInvoiceFilter === 'received') ?
+								item.invoiceReceived : !item.invoiceReceived;
+							if (!invoiceMatch) {
+								return true;
+							}
+						}
 
-					if (reimbursedFilter !== 'all') {
-						query = query.eq('reimbursed', reimbursedFilter);
-					}
+						return false;
+					});
 
-					if (invoiceFilter !== 'all') {
-						const invoiceReceived = invoiceFilter === 'received';
-						query = query.eq('invoice_received', invoiceReceived);
-					}
+					// 保存到数据库
+					updateLocalStorage();
 
-					const {
-						error
-					} = await query;
+					// 更新UI
+					updateMonthFilterOptions();
+					renderTable();
+					updateStats();
 
-					if (error) throw error;
-
-					alert('删除成功！');
-					loadItems();
-				} catch (error) {
-					console.error('删除数据失败:', error);
-					alert('删除数据失败: ' + error.message);
+					alert(`成功删除 ${filteredItems.length} 条记录！`);
 				}
 			}
+
+			// 重置导入表单
+			function resetImportForm() {
+				fileInput.value = '';
+				fileInfo.textContent = '未选择文件';
+				confirmImportBtn.style.display = 'none';
+			}
+
+			// 更新月份筛选选项
+			function updateMonthFilterOptions() {
+				// 获取所有存在的月份
+				const months = new Set();
+				items.forEach(item => {
+					const itemDate = new Date(item.date);
+					const year = itemDate.getFullYear();
+					const month = itemDate.getMonth() + 1;
+					const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+					months.add(monthKey);
+				});
+
+				// 清空现有选项（保留"全部月份"）
+				monthFilter.innerHTML = '<option value="all">全部月份</option>';
+
+				// 添加存在的月份选项
+				const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+				sortedMonths.forEach(month => {
+					const [year, monthNum] = month.split('-');
+					const option = document.createElement('option');
+					option.value = month;
+					option.textContent = `${year}年${parseInt(monthNum)}月`;
+					monthFilter.appendChild(option);
+				});
+			}
+
+			// 获取筛选后的物品列表
+			function getFilteredItems() {
+				let filteredItems = [...items];
+
+				// 月份筛选
+				if (currentFilter !== 'all') {
+					filteredItems = filteredItems.filter(item => {
+						const itemDate = new Date(item.date);
+						const itemMonth =
+							`${itemDate.getFullYear()}-${(itemDate.getMonth() + 1).toString().padStart(2, '0')}`;
+						return itemMonth === currentFilter;
+					});
+				}
+
+				// 报销状态筛选
+				if (currentReimbursedFilter !== 'all') {
+					filteredItems = filteredItems.filter(item => item.reimbursed === currentReimbursedFilter);
+				}
+
+				// 发票状态筛选
+				if (currentInvoiceFilter !== 'all') {
+					filteredItems = filteredItems.filter(item => {
+						if (currentInvoiceFilter === 'received') {
+							return item.invoiceReceived === true;
+						} else if (currentInvoiceFilter === 'pending') {
+							return item.invoiceReceived === false;
+						}
+						return true;
+					});
+				}
+
+				return filteredItems.sort((a, b) => new Date(a.date) - new Date(b.date));
+			}
+
+			// 渲染表格
+			function renderTable() {
+				itemsTable.innerHTML = '';
+
+				const filteredItems = getFilteredItems();
+
+				if (filteredItems.length === 0) {
+					itemsTable.innerHTML = '<tr><td colspan="8" style="text-align: center;">暂无数据，请添加采购物品</td></tr>';
+					return;
+				}
+
+				filteredItems.forEach((item, index) => {
+					const row = document.createElement('tr');
+
+					// 根据报销状态设置颜色
+					const statusClass = item.reimbursed === '已报销' ? 'status-reimbursed' : 'status-unreimbursed';
+
+					row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${item.date}</td>
+                    <td>${item.name}</td>
+                    <td>${item.supplier}</td>
+                    <td>¥${parseFloat(item.amount).toFixed(2)}</td>
+                    <td class="${statusClass}">${item.reimbursed}</td>
+                    <td>
+                        <input type="checkbox" class="invoice-checkbox" ${item.invoiceReceived ? 'checked' : ''} 
+                               onchange="toggleInvoiceReceived(${items.indexOf(item)})">
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-reimburse" onclick="toggleReimbursed(${items.indexOf(item)})">${item.reimbursed === '已报销' ? '标记未报销' : '标记已报销'}</button>
+                            <button class="btn-edit" onclick="editItem(${items.indexOf(item)})">编辑</button>
+                            <button class="btn-delete" onclick="deleteItem(${items.indexOf(item)})">删除</button>
+                        </div>
+                    </td>
+                `;
+
+					itemsTable.appendChild(row);
+				});
+			}
+
+			// 切换发票状态
+			function toggleInvoiceReceived(index) {
+				items[index].invoiceReceived = !items[index].invoiceReceived;
+				updateLocalStorage();
+				renderTable();
+			}
+
+			// 更新统计信息
+			function updateStats() {
+				const filteredItems = getFilteredItems();
+
+				let unreimbursedTotal = 0;
+				let unreimbursedCount = 0;
+				let monthlyTotal = 0;
+
+				filteredItems.forEach(item => {
+					const amount = parseFloat(item.amount);
+					monthlyTotal += amount;
+
+					if (item.reimbursed === '未报销') {
+						unreimbursedTotal += amount;
+						unreimbursedCount++;
+					}
+				});
+
+				monthlyTotalAmount.textContent = `¥${monthlyTotal.toFixed(2)}`;
+				remainingAmount.textContent = `¥${unreimbursedTotal.toFixed(2)}`;
+				remainingCount.textContent = unreimbursedCount;
+			}
+
+			// 更新月度统计信息
+			function updateMonthlyStats() {
+				// 总统计数据（所有物品）
+				let allTotal = 0;
+				let allUnreimbursedTotal = 0;
+				let allItemCount = 0;
+
+				items.forEach(item => {
+					const amount = parseFloat(item.amount);
+					allTotal += amount;
+					allItemCount++;
+
+					if (item.reimbursed === '未报销') {
+						allUnreimbursedTotal += amount;
+					}
+				});
+
+				totalAmount.textContent = `¥${allTotal.toFixed(2)}`;
+				totalCount.textContent = allItemCount;
+				totalUnreimbursed.textContent = `¥${allUnreimbursedTotal.toFixed(2)}`;
+
+				// 生成月度统计表格
+				generateMonthlyTable();
+			}
+
+			// 生成月度统计表格
+			function generateMonthlyTable() {
+				monthlyTable.innerHTML = '';
+
+				// 获取所有数据中的最小和最大月份
+				let minDate = new Date();
+				let maxDate = new Date(2025, 9, 1); // 2025年10月作为起始点
+
+				if (items.length > 0) {
+					// 找到数据中的最早日期和最晚日期
+					const dates = items.map(item => new Date(item.date));
+					minDate = new Date(Math.min(...dates));
+					maxDate = new Date(Math.max(...dates));
+
+					// 确保起始日期不早于2025年10月
+					const startDate = new Date(2025, 9, 1); // 2025年10月
+					if (minDate > startDate) {
+						minDate = startDate;
+					}
+				}
+
+				const monthlyData = {};
+
+				// 生成从最小月份到最大月份的月份列表
+				for (let date = new Date(minDate); date <= maxDate; date.setMonth(date.getMonth() + 1)) {
+					const year = date.getFullYear();
+					const month = date.getMonth() + 1;
+					const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+					monthlyData[monthKey] = {
+						date: `${year}年${month}月`,
+						totalAmount: 0,
+						itemCount: 0,
+						unreimbursedAmount: 0
+					};
+				}
+
+				// 填充月度数据
+				items.forEach(item => {
+					const itemDate = new Date(item.date);
+					const year = itemDate.getFullYear();
+					const month = itemDate.getMonth() + 1;
+					const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
+					const amount = parseFloat(item.amount);
+
+					if (monthlyData[monthKey]) {
+						monthlyData[monthKey].totalAmount += amount;
+						monthlyData[monthKey].itemCount += 1;
+
+						if (item.reimbursed === '未报销') {
+							monthlyData[monthKey].unreimbursedAmount += amount;
+						}
+					}
+				});
+
+				// 生成表格行
+				Object.values(monthlyData).forEach(data => {
+					const row = document.createElement('tr');
+					row.innerHTML = `
+                    <td>${data.date}</td>
+                    <td>¥${data.totalAmount.toFixed(2)}</td>
+                    <td>${data.itemCount}</td>
+                    <td>¥${data.unreimbursedAmount.toFixed(2)}</td>
+                `;
+					monthlyTable.appendChild(row);
+				});
+			}
+
+			// 添加或更新物品
+			addButton.addEventListener('click', function() {
+				const date = dateInput.value;
+				const name = itemNameInput.value.trim();
+				const supplier = supplierInput.value.trim();
+				const amount = amountInput.value;
+				const reimbursed = reimbursedSelect.value;
+
+				if (!date || !name || !supplier || !amount) {
+					alert('请填写所有字段！');
+					return;
+				}
+
+				if (editIndex === -1) {
+					// 添加新物品
+					const newItem = {
+						date,
+						name,
+						supplier,
+						amount,
+						reimbursed,
+						invoiceReceived: false
+					};
+
+					items.push(newItem);
+				} else {
+					// 更新现有物品
+					items[editIndex] = {
+						date,
+						name,
+						supplier,
+						amount,
+						reimbursed,
+						invoiceReceived: items[editIndex].invoiceReceived
+					};
+
+					// 重置编辑状态
+					editIndex = -1;
+					addButton.textContent = '添加物品';
+				}
+
+				// 保存到数据库
+				updateLocalStorage();
+
+				// 更新UI
+				updateMonthFilterOptions();
+				renderTable();
+				updateStats();
+
+				// 重置表单
+				resetForm();
+			});
+
+			// 编辑物品
+			function editItem(index) {
+				const item = items[index];
+
+				// 填充表单
+				dateInput.value = item.date;
+				itemNameInput.value = item.name;
+				supplierInput.value = item.supplier;
+				amountInput.value = item.amount;
+				reimbursedSelect.value = item.reimbursed;
+
+				// 设置编辑状态
+				editIndex = index;
+				addButton.textContent = '更新物品';
+			}
+
+			// 删除物品
+			function deleteItem(index) {
+				if (confirm('确定要删除这个物品吗？')) {
+					items.splice(index, 1);
+					updateLocalStorage();
+
+					// 更新UI
+					updateMonthFilterOptions();
+					renderTable();
+					updateStats();
+				}
+			}
+
+			// 切换报销状态
+			function toggleReimbursed(index) {
+				items[index].reimbursed = items[index].reimbursed === '已报销' ? '未报销' : '已报销';
+				updateLocalStorage();
+				renderTable();
+				updateStats();
+			}
+
+			// 重置表单
+			function resetForm() {
+				dateInput.value = today;
+				itemNameInput.value = '';
+				supplierInput.value = '';
+				amountInput.value = '';
+				reimbursedSelect.value = '未报销';
+				editIndex = -1;
+				addButton.textContent = '添加物品';
+			}
+
+			// 启动应用
+			init();
 		</script>
 	</body>
+
 </html>
