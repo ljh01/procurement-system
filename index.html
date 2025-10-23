@@ -125,7 +125,19 @@
 				gap: 10px;
 				color: #2c3e50;
 				position: relative;
+				min-width: 280px;
+				/* 增加宽度以容纳完整邮箱 */
+				flex-shrink: 0;
 			}
+
+			.user-info span {
+				white-space: nowrap;
+				overflow: visible;
+				text-overflow: clip;
+				max-width: none;
+				font-size: 16px;
+			}
+
 
 			.user-avatar {
 				width: 32px;
@@ -242,30 +254,6 @@
 				margin-left: auto;
 			}
 
-			.btn-import,
-			.btn-export {
-				background: #3498db;
-				color: white;
-				border: none;
-				padding: 10px 20px;
-				border-radius: 4px;
-				cursor: pointer;
-				font-size: 16px;
-				transition: background 0.3s;
-			}
-
-			.btn-import:hover,
-			.btn-export:hover {
-				background: #2980b9;
-			}
-
-			.btn-export {
-				background: #2ecc71;
-			}
-
-			.btn-export:hover {
-				background: #27ae60;
-			}
 
 			.btn-delete-all {
 				background: #e74c3c;
@@ -557,7 +545,7 @@
 				border-radius: 10px;
 				padding: 30px;
 				width: 90%;
-				max-width: 500px;
+				max-width: 600px;
 				max-height: 80vh;
 				overflow: auto;
 				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -624,65 +612,6 @@
 				width: 100%;
 			}
 
-			/* 导入样式 */
-			.import-content {
-				display: flex;
-				flex-direction: column;
-				gap: 25px;
-			}
-
-			.import-section {
-				padding: 20px;
-				background: #f8f9fa;
-				border-radius: 8px;
-			}
-
-			.import-section h3 {
-				color: #2c3e50;
-				margin-bottom: 15px;
-			}
-
-			.file-input {
-				display: none;
-			}
-
-			.btn-confirm-import {
-				background: #2ecc71;
-				margin-top: 15px;
-			}
-
-			.btn-confirm-import:hover {
-				background: #27ae60;
-			}
-
-			.file-info {
-				margin-top: 10px;
-				font-size: 14px;
-				color: #666;
-				padding: 8px;
-				background: white;
-				border-radius: 4px;
-				border: 1px solid #ddd;
-			}
-
-			.delete-section {
-				margin-top: 20px;
-				padding: 20px;
-				background: #f8f9fa;
-				border-radius: 8px;
-				border-left: 4px solid #e74c3c;
-			}
-
-			.delete-section h3 {
-				color: #e74c3c;
-				margin-bottom: 10px;
-			}
-
-			.delete-section p {
-				color: #666;
-				margin-bottom: 15px;
-				font-size: 14px;
-			}
 
 			@media (max-width: 1024px) {
 				.content-area {
@@ -752,6 +681,133 @@
 					flex-direction: column;
 				}
 			}
+
+			/* 自定义邮箱下拉组件样式 */
+			.custom-email-dropdown {
+				position: relative;
+				width: 100%;
+			}
+
+			.dropdown-input {
+				width: 100%;
+				padding: 12px;
+				/* 从 12px 40px 12px 12px 改为 12px */
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 16px;
+				background: white;
+				cursor: pointer;
+				/* 添加光标提示 */
+			}
+
+			.dropdown-menu {
+				position: absolute;
+				top: 100%;
+				left: 0;
+				right: 0;
+				background: white;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				max-height: 200px;
+				overflow-y: auto;
+				z-index: 1000;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+				display: none;
+			}
+
+			.dropdown-item {
+				padding: 10px 12px;
+				cursor: pointer;
+				border-bottom: 1px solid #f0f0f0;
+				transition: background 0.2s;
+			}
+
+			.dropdown-item:hover {
+				background: #f8f9fa;
+			}
+
+			.dropdown-item:last-child {
+				border-bottom: none;
+			}
+
+			.dropdown-item.empty {
+				color: #999;
+				cursor: default;
+			}
+
+			/* 输入框获得焦点时的样式 */
+			.dropdown-input:focus {
+				border-color: #3498db;
+				outline: none;
+			}
+
+			.custom-email-dropdown.active .dropdown-input {
+				border-color: #3498db;
+			}
+
+			/* 使用纯 CSS 绘制的精致清除按钮 - 更大版本 */
+			.clear-button {
+				position: absolute;
+				right: 12px;
+				top: 50%;
+				transform: translateY(-50%);
+				width: 24px;
+				/* 从 20px 增加到 24px */
+				height: 24px;
+				/* 从 20px 增加到 24px */
+				background: #c1c1c1;
+				border-radius: 50%;
+				cursor: pointer;
+				opacity: 0;
+				transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+				z-index: 2;
+				pointer-events: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.clear-button::before,
+			.clear-button::after {
+				content: '';
+				position: absolute;
+				width: 12px;
+				/* 从 10px 增加到 12px */
+				height: 2px;
+				background: white;
+				border-radius: 1px;
+				transition: all 0.3s ease;
+			}
+
+			.clear-button::before {
+				transform: rotate(45deg);
+			}
+
+			.clear-button::after {
+				transform: rotate(-45deg);
+			}
+
+			.clear-button:hover {
+				background: #a0a0a0;
+				transform: translateY(-50%) scale(1.15);
+			}
+
+			.clear-button.active {
+				opacity: 1;
+				pointer-events: all;
+			}
+
+			/* 调整输入框的 padding，为更大的清除按钮留出空间 */
+			.dropdown-input {
+				width: 100%;
+				padding: 12px 42px 12px 12px;
+				/* 右边从 38px 增加到 42px */
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 16px;
+				background: white;
+				cursor: pointer;
+			}
 		</style>
 	</head>
 	<body>
@@ -762,11 +818,22 @@
 				<div id="login-form" class="login-form">
 					<div class="form-group">
 						<label for="login-email">邮箱</label>
-						<input type="email" id="login-email" placeholder="输入邮箱">
+						<div class="custom-email-dropdown">
+							<input type="text" id="login-email" class="dropdown-input" placeholder="请输入邮箱"
+								autocomplete="off">
+							<div class="clear-button" id="clear-email"></div>
+							<div class="dropdown-menu" id="email-dropdown-menu">
+								<!-- 动态填充历史邮箱 -->
+							</div>
+						</div>
 					</div>
 					<div class="form-group">
 						<label for="login-password">密码</label>
 						<input type="password" id="login-password" placeholder="输入密码">
+					</div>
+					<div class="form-group" style="display: flex; align-items: center; margin-bottom: 20px;">
+						<input type="checkbox" id="remember-password" style="width: auto; margin-right: 8px;">
+						<label for="remember-password" style="margin-bottom: 0;">记住密码</label>
 					</div>
 					<div id="login-error" class="error-message"></div>
 					<button class="btn-login" id="btn-login">登录</button>
@@ -843,8 +910,6 @@
 						</div>
 					</div>
 					<div class="header-controls">
-						<button class="btn-import" id="btn-import">导入数据</button>
-						<button class="btn-export" id="btn-export">导出数据</button>
 						<button class="btn-delete-all" id="btn-delete-all">删除筛选数据</button>
 						<button class="btn-monthly" id="btn-monthly">月度统计</button>
 					</div>
@@ -977,31 +1042,6 @@
 				</div>
 			</div>
 
-			<!-- 导入数据弹窗 -->
-			<div class="modal" id="import-modal">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h2>数据导入</h2>
-						<button class="close-btn" id="close-import">&times;</button>
-					</div>
-
-					<div class="import-content">
-						<div class="import-section">
-							<h3>导入数据</h3>
-							<p>选择JSON格式的数据文件：</p>
-							<input type="file" id="file-input" class="file-input" accept=".json">
-							<button class="btn-import" id="select-file">选择文件</button>
-							<div id="file-info" class="file-info">未选择文件</div>
-							<button class="btn-confirm-import" id="confirm-import" style="display: none;">确认导入</button>
-						</div>
-
-						<div class="delete-section">
-							<h3>危险操作</h3>
-							<p>导入数据将<strong>完全覆盖</strong>当前的所有采购记录，此操作不可撤销。建议在导入前先导出备份当前数据。</p>
-						</div>
-					</div>
-				</div>
-			</div>
 
 			<!-- 修改密码弹窗 -->
 			<div class="modal" id="change-password-modal">
@@ -1036,9 +1076,15 @@
 			const SUPABASE_ANON_KEY =
 				'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllZWVlcnFsbm9kdHhjc2J4dnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDIwMTEsImV4cCI6MjA3NjU3ODAxMX0.fQ7bzpmCxMCHRmuLIPkPhwuZ9oz0hdaNDd1RjmHfq90';
 
-			// 初始化Supabase客户端
-			const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+			// 初始化Supabase客户端 - 修改为使用sessionStorage
+			const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+				auth: {
+					storage: window.sessionStorage,
+					autoRefreshToken: true,
+					persistSession: true,
+					detectSessionInUrl: true
+				}
+			});
 
 			// === 添加会话超时管理 ===
 			const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟不活动自动退出
@@ -1056,7 +1102,6 @@
 				const inactiveTime = currentTime - lastActivityTime;
 
 				if (inactiveTime > SESSION_TIMEOUT) {
-					// 会话超时，自动退出
 					handleAutoLogout('长时间未操作，请重新登录');
 				}
 			}
@@ -1088,8 +1133,14 @@
 					inactivityTimer = null;
 				}
 
-				// 清除本地存储的会话
-				sessionStorage.removeItem('supabase.auth.token');
+				// 保存当前记住密码状态（如果有输入）
+				const email = document.getElementById('login-email')?.value;
+				const password = document.getElementById('login-password')?.value;
+				const remember = document.getElementById('remember-password')?.checked;
+
+				if (email && remember) {
+					updateRememberedAccount(email, password || '', remember);
+				}
 
 				// 退出登录
 				await supabase.auth.signOut();
@@ -1109,12 +1160,169 @@
 					inactivityTimer = null;
 				}
 
-				// 清除本地存储
-				sessionStorage.removeItem('supabase.auth.token');
+				// 保存当前记住密码状态（如果还在登录页面）
+				const email = document.getElementById('login-email')?.value;
+				const password = document.getElementById('login-password')?.value;
+				const remember = document.getElementById('remember-password')?.checked;
+
+				if (email && remember) {
+					updateRememberedAccount(email, password || '', remember);
+				}
 
 				// 退出登录
 				await supabase.auth.signOut();
 				showLoginPage();
+			}
+
+			// === 记住密码管理 ===
+			const REMEMBERED_ACCOUNTS_KEY = 'remembered_accounts';
+
+			// 获取保存的记住密码账户
+			function getRememberedAccounts() {
+				try {
+					return JSON.parse(localStorage.getItem(REMEMBERED_ACCOUNTS_KEY)) || {};
+				} catch (error) {
+					console.error('读取记住密码数据失败:', error);
+					return {};
+				}
+			}
+
+			// 邮箱格式验证函数
+			function isValidEmail(email) {
+				if (!email || typeof email !== 'string') {
+					return false;
+				}
+
+				// 基本格式验证
+				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+				// 长度检查（RFC 5321 规定邮箱最大长度为254字符）
+				if (email.length > 254) {
+					return false;
+				}
+
+				// 本地部分和域名部分长度检查
+				const parts = email.split('@');
+				if (parts.length !== 2) {
+					return false;
+				}
+
+				const localPart = parts[0];
+				const domainPart = parts[1];
+
+				// 本地部分不能超过64字符，域名部分要包含点号
+				if (localPart.length > 64 || !domainPart.includes('.')) {
+					return false;
+				}
+
+				return emailRegex.test(email);
+			}
+
+			// 保存记住密码账户
+			function saveRememberedAccounts(accounts) {
+				try {
+					localStorage.setItem(REMEMBERED_ACCOUNTS_KEY, JSON.stringify(accounts));
+				} catch (error) {
+					console.error('保存记住密码数据失败:', error);
+				}
+			}
+
+			// 更新记住密码状态
+			function updateRememberedAccount(email, password = null, remember = false) {
+				const accounts = getRememberedAccounts();
+
+				// 确保邮箱格式统一（小写）
+				email = email.toLowerCase().trim();
+
+				if (remember && password) {
+					// 保存密码
+					accounts[email] = {
+						password: password,
+						remember: true,
+						lastUsed: new Date().toISOString()
+					};
+				} else if (remember && accounts[email]) {
+					// 只更新记住状态
+					accounts[email].remember = true;
+					accounts[email].lastUsed = new Date().toISOString();
+				} else if (!remember && accounts[email]) {
+					// 移除密码但保留记录
+					accounts[email].password = '';
+					accounts[email].remember = false;
+					accounts[email].lastUsed = new Date().toISOString();
+				} else if (remember) {
+					// 新账户设置记住但无密码
+					accounts[email] = {
+						password: '',
+						remember: true,
+						lastUsed: new Date().toISOString()
+					};
+				} else {
+					// 即使不记住密码，也记录最后使用时间
+					accounts[email] = {
+						password: '',
+						remember: false,
+						lastUsed: new Date().toISOString()
+					};
+				}
+
+				saveRememberedAccounts(accounts);
+				updateEmailHistoryList(); // 更新历史列表
+				updateDropdownItems(); // 新增：更新下拉菜单
+			}
+
+			// 更新邮箱历史列表的函数（现在主要用于其他可能需要的地方）
+			function updateEmailHistoryList() {
+				// 这个函数现在可以保持原样，但不会影响界面显示
+				// 因为我们使用自定义下拉组件了
+				const accounts = getRememberedAccounts();
+				console.log('历史邮箱:', Object.keys(accounts));
+			}
+
+			// 根据邮箱自动填充密码和记住状态
+			function autoFillCredentials(email) {
+				const accounts = getRememberedAccounts();
+				const passwordInput = document.getElementById('login-password');
+				const rememberCheckbox = document.getElementById('remember-password');
+				const clearButton = document.getElementById('clear-email'); // 新增
+
+				if (accounts[email]) {
+					const account = accounts[email];
+					if (account.password) {
+						passwordInput.value = account.password;
+					} else {
+						passwordInput.value = '';
+					}
+					rememberCheckbox.checked = account.remember;
+
+					// 新增：自动填充时激活删除按钮
+					if (email) {
+						clearButton.classList.add('active');
+					}
+				} else {
+					passwordInput.value = '';
+					rememberCheckbox.checked = false;
+				}
+			}
+
+			// 清理过期的记住密码记录（保留最近10个）
+			function cleanupOldRememberedAccounts() {
+				const accounts = getRememberedAccounts();
+				const accountsArray = Object.entries(accounts);
+
+				if (accountsArray.length > 10) {
+					// 按最后使用时间排序，保留最近的10个
+					const sortedAccounts = accountsArray.sort((a, b) =>
+						new Date(b[1].lastUsed) - new Date(a[1].lastUsed)
+					).slice(0, 10);
+
+					const cleanedAccounts = {};
+					sortedAccounts.forEach(([email, data]) => {
+						cleanedAccounts[email] = data;
+					});
+
+					saveRememberedAccounts(cleanedAccounts);
+				}
 			}
 
 			// === 添加密码重置处理函数 ===
@@ -1192,9 +1400,9 @@
 					successDiv.textContent = '密码重置成功！正在跳转到登录页面...';
 					errorDiv.textContent = '';
 
-					// 重置后清除会话，跳转到登录页面
-					setTimeout(async () => {
-						await logoutImmediately();
+					// 3秒后跳转到登录页面
+					setTimeout(() => {
+						window.location.href = window.location.origin;
 					}, 2000);
 
 				} catch (error) {
@@ -1271,28 +1479,23 @@
 			const totalUnreimbursed = document.getElementById('total-unreimbursed');
 			const monthlyTable = document.getElementById('monthly-table');
 
-			// 导入导出相关元素
-			const importModal = document.getElementById('import-modal');
-			const btnImport = document.getElementById('btn-import');
-			const btnExport = document.getElementById('btn-export');
+
 			const btnDeleteAll = document.getElementById('btn-delete-all');
-			const closeImport = document.getElementById('close-import');
-			const fileInput = document.getElementById('file-input');
-			const selectFileBtn = document.getElementById('select-file');
-			const fileInfo = document.getElementById('file-info');
-			const confirmImportBtn = document.getElementById('confirm-import');
 
 			// 设置默认日期为今天
 			const today = new Date().toISOString().split('T')[0];
 			dateInput.value = today;
 
-			// 切换登录/注册表单
+			// 切换登录/注册表单时重置
 			showRegister.addEventListener('click', () => {
 				loginForm.style.display = 'none';
 				registerForm.style.display = 'block';
 				forgotPasswordForm.style.display = 'none';
 				resetPasswordForm.style.display = 'none';
 				clearErrors();
+				if (window.resetManualInput) {
+					window.resetManualInput();
+				}
 			});
 
 			showLogin.addEventListener('click', () => {
@@ -1301,6 +1504,9 @@
 				forgotPasswordForm.style.display = 'none';
 				resetPasswordForm.style.display = 'none';
 				clearErrors();
+				if (window.resetManualInput) {
+					window.resetManualInput();
+				}
 			});
 
 			showLoginFromForgot.addEventListener('click', () => {
@@ -1322,6 +1528,185 @@
 				forgotPasswordForm.style.display = 'block';
 				resetPasswordForm.style.display = 'none';
 				clearErrors();
+			});
+
+
+			// 初始化自定义下拉框 - 简化版本
+			function initCustomEmailDropdown() {
+				const dropdownContainer = document.querySelector('.custom-email-dropdown');
+				const emailInput = document.getElementById('login-email');
+				const dropdownMenu = document.getElementById('email-dropdown-menu');
+				const clearButton = document.getElementById('clear-email');
+
+				// 清除按钮点击事件 - 简化版本
+				clearButton.addEventListener('click', function(e) {
+					e.stopPropagation();
+					clearEmailInput();
+					// 清除后立即显示下拉框
+					// showDropdown();
+				});
+
+				// 点击输入框显示/隐藏下拉菜单
+				emailInput.addEventListener('click', function(e) {
+					e.stopPropagation();
+					toggleDropdown();
+				});
+
+				// 输入时处理
+				emailInput.addEventListener('input', function(e) {
+					const email = e.target.value.trim();
+
+					// 更新清除按钮状态
+					if (email) {
+						clearButton.classList.add('active');
+					} else {
+						clearButton.classList.remove('active');
+					}
+
+					if (email) {
+						autoFillCredentials(email);
+
+						const accounts = getRememberedAccounts();
+						const hasMatchingEmail = Object.keys(accounts).some(storedEmail =>
+							storedEmail.toLowerCase().startsWith(email.toLowerCase())
+						);
+
+						if (hasMatchingEmail) {
+							if (dropdownMenu.style.display !== 'block') {
+								showDropdown();
+							}
+							updateDropdownItems(email);
+						} else {
+							hideDropdown();
+						}
+					} else {
+						if (dropdownMenu.style.display !== 'block') {
+							showDropdown();
+						}
+						updateDropdownItems('');
+					}
+				});
+
+				// 输入框失去焦点时隐藏下拉
+				emailInput.addEventListener('blur', function(e) {
+					const email = e.target.value.trim();
+
+					// 实时验证提示
+					if (email && !isValidEmail(email)) {
+						emailInput.style.borderColor = '#e74c3c';
+					} else {
+						emailInput.style.borderColor = '';
+					}
+
+					setTimeout(hideDropdown, 100);
+				});
+
+				// 点击其他地方隐藏下拉菜单
+				document.addEventListener('click', function(e) {
+					if (!dropdownContainer.contains(e.target)) {
+						hideDropdown();
+					}
+				});
+
+				// 下拉菜单点击处理
+				dropdownMenu.addEventListener('click', function(e) {
+					e.stopPropagation();
+					if (e.target.classList.contains('dropdown-item')) {
+						const email = e.target.getAttribute('data-value');
+						document.getElementById('login-email').value = email;
+						autoFillCredentials(email);
+						hideDropdown();
+
+						// 选择邮箱后激活删除按钮
+						clearButton.classList.add('active');
+					}
+				});
+
+				function toggleDropdown() {
+					if (dropdownMenu.style.display === 'block') {
+						hideDropdown();
+					} else {
+						showDropdown();
+					}
+				}
+
+				function showDropdown() {
+					dropdownMenu.style.display = 'block';
+					dropdownContainer.classList.add('active');
+					updateDropdownItems(emailInput.value.trim());
+				}
+
+				function hideDropdown() {
+					dropdownMenu.style.display = 'none';
+					dropdownContainer.classList.remove('active');
+				}
+
+				function clearEmailInput() {
+					emailInput.value = '';
+					emailInput.focus();
+					clearButton.classList.remove('active');
+					document.getElementById('login-password').value = '';
+					document.getElementById('remember-password').checked = false;
+					updateDropdownItems('');
+				}
+
+				window.clearEmailInput = clearEmailInput;
+			}
+
+			// 更新下拉菜单内容 - 支持过滤显示，无匹配时不显示提示
+			function updateDropdownItems(filterText = '') {
+				const dropdownMenu = document.getElementById('email-dropdown-menu');
+				const accounts = getRememberedAccounts();
+
+				dropdownMenu.innerHTML = '';
+
+				// 获取所有邮箱并排序
+				let allEmails = Object.entries(accounts)
+					.filter(([email, data]) => data.lastUsed)
+					.sort((a, b) => new Date(b[1].lastUsed) - new Date(a[1].lastUsed));
+
+				// 如果有过滤文本，只显示匹配的邮箱
+				if (filterText) {
+					allEmails = allEmails.filter(([email, data]) =>
+						email.toLowerCase().startsWith(filterText.toLowerCase())
+					);
+				}
+
+				// 限制显示数量
+				allEmails = allEmails.slice(0, 10);
+
+				// 如果没有匹配的邮箱，直接返回（不显示任何内容）
+				if (allEmails.length === 0) {
+					return;
+				}
+
+				allEmails.forEach(([email, data]) => {
+					const item = document.createElement('div');
+					item.className = 'dropdown-item';
+					item.setAttribute('data-value', email);
+					item.textContent = email;
+					item.style.cursor = 'pointer';
+
+					dropdownMenu.appendChild(item);
+				});
+
+				console.log('下拉菜单已更新，显示', allEmails.length, '个邮箱', filterText ? `(过滤: "${filterText}")` : '');
+			}
+
+			// 页面加载时初始化
+			document.addEventListener('DOMContentLoaded', function() {
+				// 初始化自定义下拉框
+				initCustomEmailDropdown();
+				// 更新下拉菜单内容
+				updateDropdownItems('');
+
+				// 清空表单，让用户手动选择
+				document.getElementById('login-email').value = '';
+				document.getElementById('login-password').value = '';
+				document.getElementById('remember-password').checked = false;
+
+				// 确保删除按钮初始状态正确
+				document.getElementById('clear-email').classList.remove('active');
 			});
 
 			// 用户菜单显示/隐藏
@@ -1378,6 +1763,12 @@
 
 				if (!email) {
 					forgotError.textContent = '请输入邮箱地址';
+					return;
+				}
+
+				// 邮箱格式验证
+				if (!isValidEmail(email)) {
+					forgotError.textContent = '请输入有效的邮箱地址';
 					return;
 				}
 
@@ -1522,6 +1913,12 @@
 					return;
 				}
 
+				// 邮箱格式验证
+				if (!isValidEmail(email)) {
+					registerError.textContent = '请输入有效的邮箱地址';
+					return;
+				}
+
 				if (password.length < 6) {
 					registerError.textContent = '密码至少需要6位';
 					return;
@@ -1570,13 +1967,25 @@
 				}
 			});
 
-			// 用户登录
+			// 用户登录 - 添加邮箱格式验证
 			btnLogin.addEventListener('click', async () => {
 				const email = document.getElementById('login-email').value;
 				const password = document.getElementById('login-password').value;
+				const rememberPassword = document.getElementById('remember-password').checked;
 
-				if (!email || !password) {
-					loginError.textContent = '请填写邮箱和密码';
+				// 邮箱格式验证
+				if (!email) {
+					loginError.textContent = '请输入邮箱地址';
+					return;
+				}
+
+				if (!isValidEmail(email)) {
+					loginError.textContent = '请输入有效的邮箱地址';
+					return;
+				}
+
+				if (!password) {
+					loginError.textContent = '请输入密码';
 					return;
 				}
 
@@ -1592,6 +2001,9 @@
 					if (error) throw error;
 
 					if (data.user) {
+						// 登录成功，更新记住密码状态
+						updateRememberedAccount(email, rememberPassword ? password : '', rememberPassword);
+						cleanupOldRememberedAccounts();
 						await loadUserProfile(data.user);
 						showApp();
 					}
@@ -1609,6 +2021,7 @@
 				loginPage.style.display = 'none';
 				appContainer.style.display = 'block';
 				loadUserData();
+				setupInactivityDetection(); // 确保活动检测已启动
 			}
 
 			// 显示登录页面
@@ -1622,9 +2035,10 @@
 
 			// 加载用户配置
 			async function loadUserProfile(user) {
-				const displayName = user.email?.split('@')[0] || '用户';
+				// 显示完整邮箱而不是用户名部分
+				const displayName = user.email || '用户';
 				userName.textContent = displayName;
-				userAvatar.textContent = displayName.charAt(0).toUpperCase();
+				userAvatar.textContent = user.email?.charAt(0).toUpperCase() || '用';
 			}
 
 			// 加载用户数据
@@ -1780,7 +2194,8 @@
 					updateStats();
 				});
 
-				setupImportExportEvents();
+				// 改为只设置必要的事件
+				setupNecessaryEvents();
 
 				// 检查URL中是否有重置密码的token
 				checkResetPasswordToken();
@@ -1825,88 +2240,11 @@
 				}
 			});
 
-			// 设置导入导出事件监听
-			function setupImportExportEvents() {
-				// 导入按钮点击
-				btnImport.addEventListener('click', function() {
-					resetImportForm();
-					importModal.style.display = 'flex';
-				});
-
-				// 导出按钮点击
-				btnExport.addEventListener('click', function() {
-					exportData();
-				});
-
-				// 删除筛选数据按钮点击
+			// 设置必要的事件监听
+			function setupNecessaryEvents() {
+				// 删除筛选数据按钮
 				btnDeleteAll.addEventListener('click', function() {
 					deleteFilteredData();
-				});
-
-				// 关闭导入弹窗
-				closeImport.addEventListener('click', function() {
-					importModal.style.display = 'none';
-				});
-
-				// 选择文件按钮
-				selectFileBtn.addEventListener('click', function() {
-					fileInput.click();
-				});
-
-				// 文件选择变化
-				fileInput.addEventListener('change', function(e) {
-					const file = e.target.files[0];
-					if (file) {
-						fileInfo.textContent = `已选择文件: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-						confirmImportBtn.style.display = 'block';
-					}
-				});
-
-				// 确认导入
-				confirmImportBtn.addEventListener('click', function() {
-					importData();
-				});
-
-				// 跟踪鼠标状态
-				let mouseDownTarget = null;
-
-				// 记录鼠标按下的目标
-				document.addEventListener('mousedown', function(event) {
-					mouseDownTarget = event.target;
-				});
-
-				// 只在鼠标按下和释放的目标相同时关闭弹窗
-				document.addEventListener('mouseup', function(event) {
-					// 检查鼠标按下和释放是否在同一个元素上
-					if (mouseDownTarget === event.target) {
-						const isImportModalBg = event.target === importModal;
-						const isMonthlyModalBg = event.target === monthlyModal;
-						const isChangePasswordModalBg = event.target === changePasswordModal;
-
-						if (isChangePasswordModalBg) {
-							const hasMessages = changePasswordError.textContent || changePasswordSuccess.textContent;
-							if (!hasMessages) {
-								changePasswordModal.style.display = 'none';
-								clearChangePasswordForm();
-							}
-						} else if (isImportModalBg) {
-							importModal.style.display = 'none';
-						} else if (isMonthlyModalBg) {
-							monthlyModal.style.display = 'none';
-						}
-					}
-
-					mouseDownTarget = null;
-				});
-
-				// 阻止弹窗内容区域的事件
-				document.querySelectorAll('.modal-content').forEach(content => {
-					content.addEventListener('mousedown', function(event) {
-						event.stopPropagation();
-					});
-					content.addEventListener('mouseup', function(event) {
-						event.stopPropagation();
-					});
 				});
 
 				// 月度统计弹窗
@@ -1918,98 +2256,42 @@
 				closeMonthly.addEventListener('click', function() {
 					monthlyModal.style.display = 'none';
 				});
-			}
 
-			// 导入数据
-			function importData() {
-				const file = fileInput.files[0];
-				if (!file) {
-					alert('请先选择文件！');
-					return;
-				}
+				// 弹窗点击外部关闭逻辑（保留）
+				let mouseDownTarget = null;
 
-				const reader = new FileReader();
-				reader.onload = function(e) {
-					try {
-						const importedData = JSON.parse(e.target.result);
-
-						// 验证数据格式
-						if (!Array.isArray(importedData)) {
-							throw new Error('数据格式不正确：应为数组格式');
-						}
-
-						// 验证每个项目的结构
-						const isValid = importedData.every(item =>
-							item &&
-							typeof item.date === 'string' &&
-							typeof item.name === 'string' &&
-							typeof item.supplier === 'string' &&
-							typeof item.amount === 'string' &&
-							typeof item.reimbursed === 'string'
-						);
-
-						if (!isValid) {
-							throw new Error('数据格式不正确：缺少必要字段');
-						}
-
-						if (confirm(`确定要导入 ${importedData.length} 条记录吗？这将覆盖现有数据。`)) {
-							// 确保导入的数据有invoiceReceived字段
-							const processedData = importedData.map(item => {
-								if (item.invoiceReceived === undefined) {
-									item.invoiceReceived = false;
-								}
-								return item;
-							});
-
-							items = processedData;
-							updateLocalStorage();
-
-							// 更新UI
-							updateMonthFilterOptions();
-							renderTable();
-							updateStats();
-
-							alert(`成功导入 ${importedData.length} 条记录！`);
-							importModal.style.display = 'none';
-							resetImportForm();
-						}
-					} catch (error) {
-						alert('导入失败：' + error.message);
-					}
-				};
-				reader.readAsText(file);
-			}
-
-			// 导出数据
-			function exportData() {
-				if (items.length === 0) {
-					alert('没有数据可以导出！');
-					return;
-				}
-
-				const dataStr = JSON.stringify(items, null, 2);
-				const dataBlob = new Blob([dataStr], {
-					type: 'application/json'
+				document.addEventListener('mousedown', function(event) {
+					mouseDownTarget = event.target;
 				});
 
-				// 创建下载链接
-				const url = URL.createObjectURL(dataBlob);
-				const link = document.createElement('a');
-				link.href = url;
+				document.addEventListener('mouseup', function(event) {
+					if (mouseDownTarget === event.target) {
+						const isMonthlyModalBg = event.target === monthlyModal;
+						const isChangePasswordModalBg = event.target === changePasswordModal;
 
-				// 生成文件名（包含当前日期）
-				const now = new Date();
-				const dateStr = now.toISOString().split('T')[0];
-				link.download = `采购数据_${dateStr}.json`;
+						if (isChangePasswordModalBg) {
+							const hasMessages = changePasswordError.textContent || changePasswordSuccess.textContent;
+							if (!hasMessages) {
+								changePasswordModal.style.display = 'none';
+								clearChangePasswordForm();
+							}
+						} else if (isMonthlyModalBg) {
+							monthlyModal.style.display = 'none';
+						}
+					}
+					mouseDownTarget = null;
+				});
 
-				// 触发下载
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				URL.revokeObjectURL(url);
-
-				alert(`成功导出 ${items.length} 条记录！`);
+				document.querySelectorAll('.modal-content').forEach(content => {
+					content.addEventListener('mousedown', function(event) {
+						event.stopPropagation();
+					});
+					content.addEventListener('mouseup', function(event) {
+						event.stopPropagation();
+					});
+				});
 			}
+
 
 			// 删除筛选后的数据
 			function deleteFilteredData() {
@@ -2067,13 +2349,6 @@
 
 					alert(`成功删除 ${filteredItems.length} 条记录！`);
 				}
-			}
-
-			// 重置导入表单
-			function resetImportForm() {
-				fileInput.value = '';
-				fileInfo.textContent = '未选择文件';
-				confirmImportBtn.style.display = 'none';
 			}
 
 			// 更新月份筛选选项
