@@ -808,6 +808,11 @@
 				background: white;
 				cursor: pointer;
 			}
+
+			.status-reimbursing {
+				color: #2980b9;
+				font-weight: 500;
+			}
 		</style>
 	</head>
 	<body>
@@ -953,6 +958,7 @@
 							<label for="reimbursed">报销状态</label>
 							<select id="reimbursed">
 								<option value="未报销" selected>未报销</option>
+								<option value="报销中">报销中</option>
 								<option value="已报销">已报销</option>
 							</select>
 						</div>
@@ -968,8 +974,9 @@
 								</select>
 								<select id="reimbursed-filter">
 									<option value="all">全部报销状态</option>
-									<option value="已报销">已报销</option>
 									<option value="未报销">未报销</option>
+									<option value="报销中">报销中</option>
+									<option value="已报销">已报销</option>
 								</select>
 								<select id="invoice-filter">
 									<option value="all">全部发票状态</option>
@@ -2502,30 +2509,53 @@
 					const row = document.createElement('tr');
 
 					// 根据报销状态设置颜色
-					const statusClass = item.reimbursed === '已报销' ? 'status-reimbursed' : 'status-unreimbursed';
+					let statusClass = '';
+					if (item.reimbursed === '已报销') {
+						statusClass = 'status-reimbursed';
+					} else if (item.reimbursed === '报销中') {
+						statusClass = 'status-reimbursing';
+					} else {
+						statusClass = 'status-unreimbursed';
+					}
 
 					row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${item.date}</td>
-                    <td>${item.name}</td>
-                    <td>${item.supplier}</td>
-                    <td>¥${parseFloat(item.amount).toFixed(2)}</td>
-                    <td class="${statusClass}">${item.reimbursed}</td>
-                    <td>
-                        <input type="checkbox" class="invoice-checkbox" ${item.invoiceReceived ? 'checked' : ''} 
-                               onchange="toggleInvoiceReceived(${items.indexOf(item)})">
-                    </td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn-reimburse" onclick="toggleReimbursed(${items.indexOf(item)})">${item.reimbursed === '已报销' ? '标记未报销' : '标记已报销'}</button>
-                            <button class="btn-edit" onclick="editItem(${items.indexOf(item)})">编辑</button>
-                            <button class="btn-delete" onclick="deleteItem(${items.indexOf(item)})">删除</button>
-                        </div>
-                    </td>
-                `;
+			      <td>${index + 1}</td>
+			      <td>${item.date}</td>
+			      <td>${item.name}</td>
+			      <td>${item.supplier}</td>
+			      <td>¥${parseFloat(item.amount).toFixed(2)}</td>
+			      <td class="${statusClass}">${item.reimbursed}</td>
+			      <td>
+			        <input type="checkbox" class="invoice-checkbox" ${item.invoiceReceived ? 'checked' : ''} 
+			               onchange="toggleInvoiceReceived(${items.indexOf(item)})">
+			      </td>
+			      <td>
+			        <div class="actions">
+			          <button class="btn-reimburse" onclick="toggleReimbursed(${items.indexOf(item)})">
+			            ${getReimburseButtonText(item.reimbursed)}
+			          </button>
+			          <button class="btn-edit" onclick="editItem(${items.indexOf(item)})">编辑</button>
+			          <button class="btn-delete" onclick="deleteItem(${items.indexOf(item)})">删除</button>
+			        </div>
+			      </td>
+			    `;
 
 					itemsTable.appendChild(row);
 				});
+			}
+
+			// 获取报销按钮文本的辅助函数
+			function getReimburseButtonText(status) {
+				switch (status) {
+					case '未报销':
+						return '标记报销中';
+					case '报销中':
+						return '标记已报销';
+					case '已报销':
+						return '标记未报销';
+					default:
+						return '标记报销中';
+				}
 			}
 
 			// 切换发票状态
@@ -2547,7 +2577,8 @@
 					const amount = parseFloat(item.amount);
 					monthlyTotal += amount;
 
-					if (item.reimbursed === '未报销') {
+					// "未报销"和"报销中"状态都计入未报销统计
+					if (item.reimbursed === '未报销' || item.reimbursed === '报销中') {
 						unreimbursedTotal += amount;
 						unreimbursedCount++;
 					}
@@ -2570,7 +2601,8 @@
 					allTotal += amount;
 					allItemCount++;
 
-					if (item.reimbursed === '未报销') {
+					// "未报销"和"报销中"状态都计入未报销统计
+					if (item.reimbursed === '未报销' || item.reimbursed === '报销中') {
 						allUnreimbursedTotal += amount;
 					}
 				});
@@ -2631,7 +2663,8 @@
 						monthlyData[monthKey].totalAmount += amount;
 						monthlyData[monthKey].itemCount += 1;
 
-						if (item.reimbursed === '未报销') {
+						// "未报销"和"报销中"状态都计入未报销金额
+						if (item.reimbursed === '未报销' || item.reimbursed === '报销中') {
 							monthlyData[monthKey].unreimbursedAmount += amount;
 						}
 					}
@@ -2641,11 +2674,11 @@
 				Object.values(monthlyData).forEach(data => {
 					const row = document.createElement('tr');
 					row.innerHTML = `
-                    <td>${data.date}</td>
-                    <td>¥${data.totalAmount.toFixed(2)}</td>
-                    <td>${data.itemCount}</td>
-                    <td>¥${data.unreimbursedAmount.toFixed(2)}</td>
-                `;
+			      <td>${data.date}</td>
+			      <td>¥${data.totalAmount.toFixed(2)}</td>
+			      <td>${data.itemCount}</td>
+			      <td>¥${data.unreimbursedAmount.toFixed(2)}</td>
+			    `;
 					monthlyTable.appendChild(row);
 				});
 			}
@@ -2734,7 +2767,24 @@
 
 			// 切换报销状态
 			function toggleReimbursed(index) {
-				items[index].reimbursed = items[index].reimbursed === '已报销' ? '未报销' : '已报销';
+				const currentStatus = items[index].reimbursed;
+				let newStatus;
+
+				switch (currentStatus) {
+					case '未报销':
+						newStatus = '报销中';
+						break;
+					case '报销中':
+						newStatus = '已报销';
+						break;
+					case '已报销':
+						newStatus = '未报销';
+						break;
+					default:
+						newStatus = '报销中';
+				}
+
+				items[index].reimbursed = newStatus;
 				updateLocalStorage();
 				renderTable();
 				updateStats();
