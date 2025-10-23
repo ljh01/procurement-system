@@ -2118,23 +2118,51 @@
 							localItem.date === dbItem.date &&
 							localItem.name === dbItem.name &&
 							localItem.supplier === dbItem.supplier &&
-							Math.abs(parseFloat(localItem.amount) - dbItem.amount) < 0.01 // 处理浮点数精度
+							Math.abs(parseFloat(localItem.amount) - dbItem.amount) < 0.01
 						);
 
 						if (existingItem) {
-							// 更新现有记录
-							const {
-								error: updateError
-							} = await supabase
-								.from('procurement_items')
-								.update({
+							// 检查数据是否实际发生了变化
+							const hasDateChanged = localItem.date !== existingItem.date;
+							const hasNameChanged = localItem.name !== existingItem.name;
+							const hasSupplierChanged = localItem.supplier !== existingItem.supplier;
+							const hasAmountChanged = Math.abs(parseFloat(localItem.amount) - existingItem.amount) >= 0.01;
+							const hasReimbursedChanged = localItem.reimbursed !== existingItem.reimbursed;
+							const hasInvoiceChanged = localItem.invoiceReceived !== existingItem.invoice_received;
+
+							// 只有数据实际变化时才更新
+							if (hasDateChanged || hasNameChanged || hasSupplierChanged || hasAmountChanged ||
+								hasReimbursedChanged || hasInvoiceChanged) {
+								const updateData = {
+									date: localItem.date,
+									name: localItem.name,
+									supplier: localItem.supplier,
+									amount: parseFloat(localItem.amount),
 									reimbursed: localItem.reimbursed,
 									invoice_received: localItem.invoiceReceived,
-									updated_at: new Date().toISOString() // 手动更新时间戳
-								})
-								.eq('id', existingItem.id);
+									updated_at: new Date().toISOString()
+								};
 
-							if (updateError) throw updateError;
+								const {
+									error: updateError
+								} = await supabase
+									.from('procurement_items')
+									.update(updateData)
+									.eq('id', existingItem.id);
+
+								if (updateError) throw updateError;
+
+								console.log(`更新了记录: ${localItem.name}, 变化:`, {
+									日期: hasDateChanged,
+									物品名称: hasNameChanged,
+									供应商: hasSupplierChanged,
+									金额: hasAmountChanged,
+									报销状态: hasReimbursedChanged,
+									发票状态: hasInvoiceChanged
+								});
+							} else {
+								console.log(`记录未变化，跳过更新: ${localItem.name}`);
+							}
 						} else {
 							// 插入新记录
 							const {
@@ -2148,10 +2176,14 @@
 									supplier: localItem.supplier,
 									amount: parseFloat(localItem.amount),
 									reimbursed: localItem.reimbursed,
-									invoice_received: localItem.invoiceReceived
+									invoice_received: localItem.invoiceReceived,
+									created_at: new Date().toISOString(),
+									updated_at: new Date().toISOString()
 								});
 
 							if (insertError) throw insertError;
+
+							console.log(`新增了记录: ${localItem.name}`);
 						}
 					}
 
@@ -2174,6 +2206,8 @@
 							.eq('id', itemToDelete.id);
 
 						if (deleteError) throw deleteError;
+
+						console.log(`删除了记录: ${itemToDelete.name}`);
 					}
 
 				} catch (error) {
