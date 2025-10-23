@@ -2099,7 +2099,7 @@
 				if (!user) return;
 
 				try {
-					// 获取数据库中当前的数据
+					// 获取当前数据库中的数据（包含id）
 					const {
 						data: existingData,
 						error: fetchError
@@ -2108,110 +2108,72 @@
 						.select('*')
 						.eq('user_id', user.id);
 
-					if (fetchError) {
-						console.error('获取现有数据失败:', fetchError);
-						throw fetchError;
-					}
+					if (fetchError) throw fetchError;
 
-					// 找出需要删除的项目
-					const itemsToDelete = existingData.filter(dbItem =>
-						!items.some(localItem =>
+					// 处理每个本地项目
+					for (const localItem of items) {
+						// 查找对应的数据库记录
+						const existingItem = existingData.find(dbItem =>
+							dbItem.id && // 确保有id
 							localItem.date === dbItem.date &&
 							localItem.name === dbItem.name &&
 							localItem.supplier === dbItem.supplier &&
-							parseFloat(localItem.amount) === dbItem.amount
-						)
-					);
-
-					// 找出需要插入的新项目
-					const itemsToInsert = items.filter(localItem =>
-						!existingData.some(dbItem =>
-							localItem.date === dbItem.date &&
-							localItem.name === dbItem.name &&
-							localItem.supplier === dbItem.supplier &&
-							parseFloat(localItem.amount) === dbItem.amount
-						)
-					);
-
-					// 找出需要更新的项目
-					const itemsToUpdate = items.filter(localItem => {
-						const dbItem = existingData.find(dbItem =>
-							localItem.date === dbItem.date &&
-							localItem.name === dbItem.name &&
-							localItem.supplier === dbItem.supplier &&
-							parseFloat(localItem.amount) === dbItem.amount
-						);
-						return dbItem && (
-							localItem.reimbursed !== dbItem.reimbursed ||
-							localItem.invoiceReceived !== dbItem.invoice_received
-						);
-					});
-
-					// 执行删除
-					if (itemsToDelete.length > 0) {
-						const deleteIds = itemsToDelete.map(item => item.id);
-						const {
-							error: deleteError
-						} = await supabase
-							.from('procurement_items')
-							.delete()
-							.in('id', deleteIds);
-
-						if (deleteError) {
-							console.error('删除数据失败:', deleteError);
-							throw deleteError;
-						}
-					}
-
-					// 执行插入
-					if (itemsToInsert.length > 0) {
-						const insertData = itemsToInsert.map(item => ({
-							user_id: user.id,
-							date: item.date,
-							name: item.name,
-							supplier: item.supplier,
-							amount: parseFloat(item.amount),
-							reimbursed: item.reimbursed,
-							invoice_received: item.invoiceReceived
-						}));
-
-						const {
-							error: insertError
-						} = await supabase
-							.from('procurement_items')
-							.insert(insertData);
-
-						if (insertError) {
-							console.error('插入数据失败:', insertError);
-							throw insertError;
-						}
-					}
-
-					// 执行更新
-					for (const localItem of itemsToUpdate) {
-						const dbItem = existingData.find(dbItem =>
-							localItem.date === dbItem.date &&
-							localItem.name === dbItem.name &&
-							localItem.supplier === dbItem.supplier &&
-							parseFloat(localItem.amount) === dbItem.amount
+							Math.abs(parseFloat(localItem.amount) - dbItem.amount) < 0.01 // 处理浮点数精度
 						);
 
-						if (dbItem) {
+						if (existingItem) {
+							// 更新现有记录
 							const {
 								error: updateError
 							} = await supabase
 								.from('procurement_items')
 								.update({
 									reimbursed: localItem.reimbursed,
-									invoice_received: localItem.invoiceReceived
+									invoice_received: localItem.invoiceReceived,
+									updated_at: new Date().toISOString() // 手动更新时间戳
 								})
-								.eq('id', dbItem.id);
+								.eq('id', existingItem.id);
 
-							if (updateError) {
-								console.error('更新数据失败:', updateError);
-								throw updateError;
-							}
+							if (updateError) throw updateError;
+						} else {
+							// 插入新记录
+							const {
+								error: insertError
+							} = await supabase
+								.from('procurement_items')
+								.insert({
+									user_id: user.id,
+									date: localItem.date,
+									name: localItem.name,
+									supplier: localItem.supplier,
+									amount: parseFloat(localItem.amount),
+									reimbursed: localItem.reimbursed,
+									invoice_received: localItem.invoiceReceived
+								});
+
+							if (insertError) throw insertError;
 						}
+					}
+
+					// 删除本地已删除的记录
+					const itemsToDelete = existingData.filter(dbItem =>
+						!items.some(localItem =>
+							localItem.date === dbItem.date &&
+							localItem.name === dbItem.name &&
+							localItem.supplier === dbItem.supplier &&
+							Math.abs(parseFloat(localItem.amount) - dbItem.amount) < 0.01
+						)
+					);
+
+					for (const itemToDelete of itemsToDelete) {
+						const {
+							error: deleteError
+						} = await supabase
+							.from('procurement_items')
+							.delete()
+							.eq('id', itemToDelete.id);
+
+						if (deleteError) throw deleteError;
 					}
 
 				} catch (error) {
